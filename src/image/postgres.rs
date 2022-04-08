@@ -48,6 +48,8 @@ mod test {
         let client = Podman::new();
         let container = Postgres::default().with_password("password").container();
 
-        client.create(container).unwrap();
+        let mut handle = client.create(container).unwrap();
+
+        handle.stop().unwrap();
     }
 }

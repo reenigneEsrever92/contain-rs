@@ -15,7 +15,9 @@ pub trait Client {
 pub trait ContainerHandle {
     type LogType: LogStream;
 
-    fn stop(&mut self);
+    fn start(& mut self) -> Result<(), Error>;
+    fn stop(& mut self) -> Result<(), Error>;
+    fn rm(& mut self) -> Result<(), Error>;
     fn log(&self) -> Self::LogType;
     fn container(&self) -> &Container;
 }
