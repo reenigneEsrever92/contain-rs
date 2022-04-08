@@ -1,3 +1,5 @@
+![example workflow](https://github.com/reenigneEsrever92/contain-rs/actions/workflows/rust.yml/badge.svg)
+
 # contain-rs
 A tool to use docker / podman / oci containers with rust
 
