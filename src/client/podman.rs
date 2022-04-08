@@ -68,6 +68,7 @@ impl Podman {
         self.add_run_args(&mut command);
         self.add_env_var_args(&mut command, container);
         self.add_image_arg(&mut command, container);
+        self.add_wait_strategy_args(&mut command, container);
 
         command
     }
@@ -82,6 +83,23 @@ impl Podman {
                 .arg("-e")
                 .arg(format!("{}={}", env_var.key, env_var.value));
         });
+    }
+
+    fn add_wait_strategy_args(&self, command: &mut Command, container: &Container) {
+        match &container.wait_strategy {
+            Some(strategy) => match strategy {
+                WaitStrategy::LogMessage { pattern: _ } => {}
+                WaitStrategy::HealthCheck { check } => self.add_health_check_args(command, check),
+            },
+            None => {}
+        }
+    }
+
+    fn add_health_check_args(&self, command: &mut Command, check: &HealthCheck) {
+        command
+            .arg("--healthcheck-command")
+            .arg(format!("CMD-SHELL {}", check.command))
+            .arg("--healthcheck-interval=0");
     }
 
     fn add_image_arg(&self, command: &mut Command, container: &Container) {
@@ -106,6 +124,7 @@ impl Podman {
     fn wait_for(&self, handle: &PodmanHandle, strategy: &WaitStrategy) -> Result<(), Error> {
         match strategy {
             WaitStrategy::LogMessage { pattern } => self.wait_for_log(handle, &pattern),
+            WaitStrategy::HealthCheck { check: _ } => self.wait_for_health_check(handle),
         }
     }
 
@@ -121,15 +140,22 @@ impl Podman {
                         return Ok(());
                     }
                 }
-                Err(_e) => return Err(Error {
-                    message: "IO Error while reading log".to_string(),
-                }),
+                Err(_e) => {
+                    return Err(Error {
+                        message: "IO Error while reading log".to_string(),
+                    })
+                }
             };
         }
 
         Err(Error {
-            message: "Pattern defined for WaitStrategy could not be found in container output".to_string(),
+            message: "Pattern defined for WaitStrategy could not be found in container output"
+                .to_string(),
         })
+    }
+
+    fn wait_for_health_check(&self, handle: &PodmanHandle) -> Result<(), Error> {
+        todo!()
     }
 }
 
@@ -208,7 +234,11 @@ impl ContainerHandle for PodmanHandle {
 
 #[cfg(test)]
 mod test {
-    use crate::{client::Client, container::Container, image::Image};
+    use crate::{
+        client::Client,
+        container::{Container, HealthCheck},
+        image::Image,
+    };
 
     use super::Podman;
 
@@ -219,5 +249,17 @@ mod test {
                 .create(Container::from_image(Image::from_name("nginx")))
                 .unwrap();
         }
+    }
+
+    #[test]
+    fn test_wait_for_healthcheck() {
+        // TODO
+        // let handle = Podman::new()
+        //     .create(Container::from_image(Image::from_name("nginx")).wait_for(
+        //         crate::container::WaitStrategy::HealthCheck {
+        //             check: HealthCheck::new("curl http://localhost || exit 1".to_string()),
+        //         },
+        //     ))
+        //     .unwrap();
     }
 }

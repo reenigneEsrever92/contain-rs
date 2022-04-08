@@ -1,11 +1,52 @@
-use std::{collections::HashMap, ops::Deref, process::Command};
+use std::{collections::HashMap, ops::Deref, process::Command, time::Duration};
 
 use regex::Regex;
 
 use crate::{client::ContainerHandle, image::Image};
 
+pub struct HealthCheck {
+    pub command: String,
+    pub retries: Option<i32>,
+    pub interval: Option<Duration>,
+    pub start_period: Option<Duration>,
+    pub timeout: Option<Duration>,
+}
+
+impl HealthCheck {
+    pub fn new(command: String) -> Self {
+        Self {
+            command,
+            retries: None,
+            interval: None,
+            start_period: None,
+            timeout: None,
+        }
+    }
+
+    pub fn retries(mut self, retries: i32) -> Self {
+        self.retries = Some(retries);
+        self
+    }
+
+    pub fn interval(mut self, interval: Duration) -> Self {
+        self.interval = Some(interval);
+        self
+    }
+
+    pub fn start_period(mut self, start_period: Duration) -> Self {
+        self.start_period = Some(start_period);
+        self
+    }
+
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
+}
+
 pub enum WaitStrategy {
     LogMessage { pattern: Regex },
+    HealthCheck { check: HealthCheck },
 }
 
 pub struct Network {
@@ -35,7 +76,7 @@ impl EnvVar {
 impl<T, T2> Into<EnvVar> for (T, T2)
 where
     T: Into<String>,
-    T2: Into<String>
+    T2: Into<String>,
 {
     fn into(self) -> EnvVar {
         EnvVar::new(self.0.into(), self.1.into())

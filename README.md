@@ -5,6 +5,7 @@ A tool to use docker / podman / oci containers with rust
 
 ## TODO
 
+- [ ] implement other wait strategies
 - [ ] trace errors
 - [ ] improve error reporting
 - [ ] handle std error for child processes
