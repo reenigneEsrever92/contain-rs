@@ -131,3 +131,14 @@ impl From<Image> for Container {
         Container::from_image(image)
     }
 }
+
+pub struct ContainerInstance {
+    pub id: String,
+    pub container: Container
+}
+
+impl ContainerInstance {
+    pub fn new(id: String, container: Container) -> Self {
+        Self { id, container }
+    }
+}

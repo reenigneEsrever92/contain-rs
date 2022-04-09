@@ -1,6 +1,6 @@
 use std::{io::{BufRead, Read, BufReader}, process::{Command, Child, Stdio}};
 
-use crate::{container::Container, error::Error};
+use crate::{container::Container, error::{Context, ContainersError, Result}};
 
 pub mod docker;
 pub mod podman;
@@ -9,20 +9,18 @@ pub mod shared;
 pub trait Client {
     type ContainerHandle: ContainerHandle;
 
-    fn create(&self, container: Container) -> Result<Self::ContainerHandle, Error>;
+    fn create(&self, container: Container) -> Result<Self::ContainerHandle>;
 }
 
 pub trait ContainerHandle {
-    type LogType: LogStream;
-
-    fn start(& mut self) -> Result<(), Error>;
-    fn stop(& mut self) -> Result<(), Error>;
-    fn rm(& mut self) -> Result<(), Error>;
-    fn log(&self) -> Self::LogType;
+    fn start(& mut self) -> Result<()>;
+    fn stop(& mut self) -> Result<()>;
+    fn rm(& mut self) -> Result<()>;
+    fn log(&self) -> Result<Box<dyn BufRead>>;
     fn container(&self) -> &Container;
 }
 
 pub trait LogStream {
-    fn stream(& mut self) -> Result<Box<dyn BufRead>, Error>;
+    fn stream(& mut self) -> Result<Box<dyn BufRead>>;
 }
 

@@ -1,16 +1,21 @@
 use std::{
-    io::{BufRead, BufReader, Read},
-    process::{Child, Command, ExitStatus, Stdio},
+    io::{BufRead, BufReader},
+    process::{Command, Stdio},
+    thread,
+    time::Duration,
 };
 
 use log::debug;
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use regex::Regex;
 use serde::Deserialize;
+use tracing_error::SpanTrace;
 
-use crate::{container::*, error::Error};
+use crate::{
+    container::*,
+    error::{Context, ErrorType, Result},
+};
 
-use super::{shared::SharedLogStream, Client, ContainerHandle, LogStream};
+use super::{Client, ContainerHandle};
 
 #[derive(Deserialize)]
 pub struct PodmanContainer {
@@ -29,9 +34,38 @@ impl Podman {
         Self { host: None }
     }
 
-    pub fn ps(&self) -> Result<Vec<PodmanContainer>, Error> {
-        let json = self.run_and_wait_for_command(&mut self.build_ps_command())?;
-        Ok(serde_json::from_str(&json)?)
+    pub fn ps(&self) -> Result<Vec<PodmanContainer>> {
+        let result = self.run_and_wait_for_command(self.build_ps_command());
+
+        match result {
+            Ok(output) => match serde_json::from_str(&output) {
+                Ok(vec) => Ok(vec),
+                Err(e) => Err(Context::new()
+                    .info("reason", "could not parse json")
+                    .info("json", &output)
+                    .into_error(ErrorType::PsError)),
+            },
+            Err(e) => Err(Context::new().source(e).into_error(ErrorType::PsError)),
+        }
+    }
+
+    fn do_log(&self, handle: &PodmanHandle) -> Result<Box<dyn BufRead>> {
+        let mut command = Command::new(Podman::BINARY);
+        command.arg("logs").arg("-f").arg(&handle.instance.id);
+
+        match command.stdout(Stdio::piped()).spawn() {
+            Ok(mut child) => match child.stdout.take() {
+                Some(stdout) => Ok(Box::new(BufReader::new(stdout))),
+                None => Err(Context::new()
+                    .info("reason", "Stoud could not be opened")
+                    .into_error(ErrorType::LogError)),
+            },
+            Err(e) => Err(Context::new()
+                .source(e)
+                .span_trace(SpanTrace::capture())
+                .info("reason", "Could not spawn log command")
+                .into_error(ErrorType::LogError)),
+        }
     }
 
     fn build_ps_command(&self) -> Command {
@@ -45,7 +79,7 @@ impl Podman {
     fn build_rm_command(&self, podman_handle: &PodmanHandle) -> Command {
         let mut command = Command::new(Self::BINARY);
 
-        command.arg("rm").arg("-f").arg(&podman_handle.id);
+        command.arg("rm").arg("-f").arg(&podman_handle.instance.id);
 
         command
     }
@@ -53,13 +87,13 @@ impl Podman {
     fn build_stop_command(&self, podman_handle: &PodmanHandle) -> Command {
         let mut command = Command::new(Self::BINARY);
 
-        command.arg("stop").arg(&podman_handle.id);
+        command.arg("stop").arg(&podman_handle.instance.id);
 
         command
     }
 
     fn build_run_command(&self, podman_handle: &PodmanHandle) -> Command {
-        return self.build_run_command_from_container(&podman_handle.container);
+        return self.build_run_command_from_container(&podman_handle.instance.container);
     }
 
     fn build_run_command_from_container(&self, container: &Container) -> Command {
@@ -69,6 +103,17 @@ impl Podman {
         self.add_env_var_args(&mut command, container);
         self.add_image_arg(&mut command, container);
         self.add_wait_strategy_args(&mut command, container);
+
+        command
+    }
+
+    fn build_health_check_command(&self, handle: &PodmanHandle) -> Command {
+        let mut command = Command::new(Self::BINARY);
+
+        command
+            .arg("healthcheck")
+            .arg("run")
+            .arg(&handle.instance.id);
 
         command
     }
@@ -98,83 +143,120 @@ impl Podman {
     fn add_health_check_args(&self, command: &mut Command, check: &HealthCheck) {
         command
             .arg("--healthcheck-command")
-            .arg(format!("CMD-SHELL {}", check.command))
-            .arg("--healthcheck-interval=0");
+            .arg(format!("CMD-SHELL {}", check.command));
+
+        if let Some(retries) = check.retries {
+            command
+                .arg("--healthcheck-retries")
+                .arg(retries.to_string());
+        }
+
+        if let Some(duration) = check.interval {
+            command
+                .arg("--healthcheck-interval")
+                .arg(format!("{}s", duration.as_secs()));
+        }
+
+        if let Some(duration) = check.start_period {
+            command
+                .arg("--healthcheck-start-period")
+                .arg(format!("{}s", duration.as_secs()));
+        }
     }
 
     fn add_image_arg(&self, command: &mut Command, container: &Container) {
         command.arg(String::from(&container.image));
     }
 
-    fn run_and_wait_for_command(&self, command: &mut Command) -> Result<String, std::io::Error> {
+    fn run_and_wait_for_command(&self, mut command: Command) -> Result<String> {
         debug!("Run and wait for command: {:?}", command);
 
-        let result = command
+        let child = command
             .stdout(Stdio::piped()) // TODO fm - Sometimes podman asks the user for which repo to use. This is currently ignored.
             .spawn()
-            .unwrap()
-            .wait_with_output()
-            .map(|r| String::from_utf8(r.stdout).unwrap());
+            .unwrap();
+
+        let result = child.wait_with_output();
 
         debug!("Command result: {:?}", result);
 
-        result
+        match result {
+            Ok(output) => {
+                if let Some(0) = output.status.code() {
+                    Ok(String::from_utf8(output.stdout).unwrap())
+                } else {
+                    Err(Context::new()
+                        .info("reason", "Non zero exit-code")
+                        .info("exit-code", &output.status.code().unwrap())
+                        .info("command", &command)
+                        .into_error(ErrorType::CommandError))
+                }
+            }
+            Err(e) => Err(Context::new()
+                .info("reason", "Io error while getting process output")
+                .into_error(ErrorType::Unrecoverable)),
+        }
     }
 
-    fn wait_for(&self, handle: &PodmanHandle, strategy: &WaitStrategy) -> Result<(), Error> {
+    fn wait_for(&self, handle: &PodmanHandle, strategy: &WaitStrategy) -> Result<()> {
         match strategy {
             WaitStrategy::LogMessage { pattern } => self.wait_for_log(handle, &pattern),
             WaitStrategy::HealthCheck { check: _ } => self.wait_for_health_check(handle),
         }
     }
 
-    fn wait_for_log(&self, handle: &PodmanHandle, pattern: &Regex) -> Result<(), Error> {
-        let stream = handle.log().stream()?;
+    fn wait_for_log(&self, handle: &PodmanHandle, pattern: &Regex) -> Result<()> {
+        let stream = self.do_log(handle)?;
 
         for line in stream.lines() {
             match line {
-                Ok(s) => {
-                    debug!("Searching for LogMessage pattern: {pattern}, in: {s}");
-                    if pattern.is_match(&s) {
-                        debug!("Found pattern in line: {s}");
+                Ok(line) => {
+                    debug!("Searching for LogMessage pattern: {pattern}, in: {line}");
+                    if pattern.is_match(&line) {
+                        debug!("Found pattern in line: {line}");
                         return Ok(());
                     }
                 }
-                Err(_e) => {
-                    return Err(Error {
-                        message: "IO Error while reading log".to_string(),
-                    })
-                }
-            };
+                Err(e) => todo!(),
+            }
         }
 
-        Err(Error {
-            message: "Pattern defined for WaitStrategy could not be found in container output"
-                .to_string(),
-        })
+        Err(Context::new()
+            .info(
+                "reason",
+                "Log has been closed before message could be found",
+            )
+            .into_error(ErrorType::WaitError))
     }
 
-    fn wait_for_health_check(&self, handle: &PodmanHandle) -> Result<(), Error> {
-        todo!()
+    fn wait_for_health_check(&self, handle: &PodmanHandle) -> Result<()> {
+        thread::sleep(Duration::from_secs(10));
+
+        match self.run_and_wait_for_command(self.build_health_check_command(handle)) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Context::new()
+                .info("reason", "Healthcheck failed")
+                .source(e)
+                .into_error(ErrorType::WaitError)),
+        }
     }
 }
 
 impl Client for Podman {
     type ContainerHandle = PodmanHandle;
 
-    fn create(&self, container: Container) -> Result<Self::ContainerHandle, Error> {
+    fn create(&self, container: Container) -> Result<Self::ContainerHandle> {
         let id = self
-            .run_and_wait_for_command(&mut self.build_run_command_from_container(&container))?
+            .run_and_wait_for_command(self.build_run_command_from_container(&container))?
             .trim()
             .to_string();
 
         let handle = PodmanHandle {
-            id,
-            container,
+            instance: ContainerInstance::new(id, container),
             podman: self.clone(),
         };
 
-        match &handle.container.wait_strategy {
+        match &handle.instance.container.wait_strategy {
             Some(strategy) => self.wait_for(&handle, strategy)?,
             None => {}
         };
@@ -184,53 +266,47 @@ impl Client for Podman {
 }
 
 pub struct PodmanHandle {
-    id: String,
-    container: Container,
+    instance: ContainerInstance,
     podman: Podman,
 }
 
 impl ContainerHandle for PodmanHandle {
-    type LogType = SharedLogStream;
-
-    fn stop(&mut self) -> Result<(), Error> {
+    fn stop(&mut self) -> Result<()> {
         self.podman
-            .run_and_wait_for_command(&mut self.podman.build_stop_command(&self))?;
+            .run_and_wait_for_command(self.podman.build_stop_command(&self))?;
 
         Ok(())
     }
 
-    fn log(&self) -> Self::LogType {
-        let mut command = Command::new(Podman::BINARY);
-        command.arg("logs").arg("-f").arg(&self.id);
-
-        SharedLogStream { command }
+    fn log(&self) -> Result<Box<dyn BufRead>> {
+        self.podman.do_log(self)
     }
 
     fn container(&self) -> &Container {
-        &self.container
+        &self.instance.container
     }
 
-    fn start(&mut self) -> Result<(), Error> {
+    fn start(&mut self) -> Result<()> {
         self.podman
-            .run_and_wait_for_command(&mut self.podman.build_run_command(self))?;
+            .run_and_wait_for_command(self.podman.build_run_command(self))?;
 
         Ok(())
     }
 
-    fn rm(&mut self) -> Result<(), Error> {
+    fn rm(&mut self) -> Result<()> {
         self.podman
-            .run_and_wait_for_command(&mut self.podman.build_rm_command(self))?;
+            .run_and_wait_for_command(self.podman.build_rm_command(self))?;
 
         Ok(())
     }
 }
 
-// impl Drop for PodmanHandle {
-//     fn drop(&mut self) {
-//         self.stop().unwrap();
-//         self.rm().unwrap();
-//     }
-// }
+impl Drop for PodmanHandle {
+    fn drop(&mut self) {
+        self.stop().unwrap();
+        self.rm().unwrap();
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -253,7 +329,10 @@ mod test {
 
     #[test]
     fn test_wait_for_healthcheck() {
-        // TODO
+        // pretty_env_logger::formatted_timed_builder()
+        //     .filter_level(log::LevelFilter::Debug)
+        //     .init();
+
         // let handle = Podman::new()
         //     .create(Container::from_image(Image::from_name("nginx")).wait_for(
         //         crate::container::WaitStrategy::HealthCheck {
