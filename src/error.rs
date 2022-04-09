@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::Display};
 
-use rand::Error;
 use tracing_error::SpanTrace;
 
 pub type Result<T> = std::result::Result<T, ContainersError>;
@@ -40,7 +39,11 @@ impl Context {
         self
     }
 
-    pub fn info<T: Into<String>, T2: std::fmt::Debug + ?Sized>(mut self, key: T, value: &T2) -> Self {
+    pub fn info<T: Into<String>, T2: std::fmt::Debug + ?Sized>(
+        mut self,
+        key: T,
+        value: &T2,
+    ) -> Self {
         self.info.insert(key.into(), format!("{:?}", value));
         self
     }

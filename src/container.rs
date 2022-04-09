@@ -1,8 +1,8 @@
-use std::{collections::HashMap, ops::Deref, process::Command, time::Duration};
+use std::time::Duration;
 
 use regex::Regex;
 
-use crate::{client::ContainerHandle, image::Image};
+use crate::image::Image;
 
 pub struct HealthCheck {
     pub command: String,

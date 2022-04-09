@@ -1,10 +1,9 @@
-use std::{io::{BufRead, Read, BufReader}, process::{Command, Child, Stdio}};
+use std::io::BufRead;
 
-use crate::{container::Container, error::{Context, ContainersError, Result}};
+use crate::{container::Container, error::Result};
 
 pub mod docker;
 pub mod podman;
-pub mod shared;
 
 pub trait Client {
     type ContainerHandle: ContainerHandle;

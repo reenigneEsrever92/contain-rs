@@ -41,6 +41,7 @@ impl Podman {
             Ok(output) => match serde_json::from_str(&output) {
                 Ok(vec) => Ok(vec),
                 Err(e) => Err(Context::new()
+                    .source(e)
                     .info("reason", "could not parse json")
                     .info("json", &output)
                     .into_error(ErrorType::PsError)),
@@ -217,7 +218,12 @@ impl Podman {
                         return Ok(());
                     }
                 }
-                Err(e) => todo!(),
+                Err(e) => {
+                    return Err(Context::new()
+                        .source(e)
+                        .info("reason", "Could not read from log")
+                        .into_error(ErrorType::LogError))
+                }
             }
         }
 
@@ -312,7 +318,7 @@ impl Drop for PodmanHandle {
 mod test {
     use crate::{
         client::Client,
-        container::{Container, HealthCheck},
+        container::Container,
         image::Image,
     };
 
