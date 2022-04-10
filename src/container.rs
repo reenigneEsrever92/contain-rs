@@ -4,6 +4,7 @@ use regex::Regex;
 
 use crate::image::Image;
 
+#[derive(Clone)]
 pub struct HealthCheck {
     pub command: String,
     pub retries: Option<i32>,
@@ -44,24 +45,29 @@ impl HealthCheck {
     }
 }
 
+#[derive(Clone)]
 pub enum WaitStrategy {
     LogMessage { pattern: Regex },
     HealthCheck { check: HealthCheck },
 }
 
+#[derive(Clone)]
 pub struct Network {
     // TODO
 }
 
+#[derive(Clone)]
 pub struct Port {
     number: String,
 }
 
+#[derive(Clone)]
 pub struct PortMapping {
     source: Port,
     target: Port,
 }
 
+#[derive(Clone)]
 pub struct EnvVar {
     pub key: String,
     pub value: String,
@@ -83,6 +89,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct Container {
     pub image: Image,
     pub network: Option<Network>,
@@ -134,11 +141,10 @@ impl From<Image> for Container {
 
 pub struct ContainerInstance {
     pub id: String,
-    pub container: Container
 }
 
 impl ContainerInstance {
-    pub fn new(id: String, container: Container) -> Self {
-        Self { id, container }
+    pub fn new(id: String) -> Self {
+        Self { id }
     }
 }

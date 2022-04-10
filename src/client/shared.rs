@@ -11,11 +11,14 @@ use crate::{
     error::{Context, ErrorType, Result},
 };
 
+use super::ContainerHandle;
+
 pub fn run_and_wait_for_command(mut command: Command) -> Result<String> {
     debug!("Run and wait for command: {:?}", command);
 
     let child = command
         .stdout(Stdio::piped()) // TODO fm - Sometimes podman asks the user for which repo to use. This is currently ignored.
+        .stderr(Stdio::piped())
         .spawn()
         .unwrap();
 
@@ -65,13 +68,6 @@ pub fn build_stop_command<'a>(
 }
 
 pub fn build_run_command<'a>(
-    command: &'a mut Command,
-    instance: &ContainerInstance,
-) -> &'a Command {
-    build_run_command_from_container(command, &instance.container)
-}
-
-pub fn build_run_command_from_container<'a>(
     command: &'a mut Command,
     container: &Container,
 ) -> &'a Command {
@@ -177,4 +173,32 @@ pub fn do_log(mut log_command: Command) -> Result<Box<dyn BufRead>> {
             .info("message", "Could not spawn log command")
             .into_error(ErrorType::LogError)),
     }
+}
+
+pub fn wait_for(mut command: Command, instance: &ContainerInstance, strategy: &WaitStrategy) -> Result<()> {
+    build_log_command(& mut command, instance);
+
+    match strategy {
+        WaitStrategy::LogMessage { pattern } => match do_log(command) {
+            Ok(log) => wait_for_log(instance, &pattern, log),
+            Err(e) => Err(Context::new()
+                .source(e)
+                .info("message", "Waiting for log output failed")
+                .into_error(ErrorType::LogError)),
+        },
+        WaitStrategy::HealthCheck { check: _ } => todo!(),
+    }
+}
+
+fn wait_for_health_check<T: ContainerHandle>(handle: &T) -> Result<()> {
+    todo!()
+    // thread::sleep(Duration::from_secs(10));
+
+    // match run_and_wait_for_command(self.build_health_check_command(&handle.instance)) {
+    //     Ok(_) => Ok(()),
+    //     Err(e) => Err(Context::new()
+    //         .info("reason", "Healthcheck failed")
+    //         .source(e)
+    //         .into_error(ErrorType::WaitError)),
+    // }
 }

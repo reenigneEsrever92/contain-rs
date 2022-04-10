@@ -1,8 +1,14 @@
-use std::{process::Command, io::BufRead};
+use std::{io::BufRead, process::Command};
 
-use crate::{container::{ContainerInstance, Container, WaitStrategy}, error::Result};
+use crate::{
+    container::{Container, ContainerInstance, WaitStrategy},
+    error::Result,
+};
 
-use super::{ContainerHandle, Client, shared::{build_run_command_from_container, run_and_wait_for_command}};
+use super::{
+    shared::{build_run_command, run_and_wait_for_command},
+    Client, ContainerHandle,
+};
 
 #[derive(Debug, Clone)]
 pub struct Docker {
@@ -29,45 +35,50 @@ impl Docker {
     }
 }
 
+///
+///
+///
 impl Client for Docker {
     type ContainerHandle = DockerHandle;
 
     fn create(&self, container: Container) -> Result<Self::ContainerHandle> {
-        let mut command = self.build_command();
+        todo!()
+        // let mut command = self.build_command();
 
-        build_run_command_from_container(& mut command, &container);
+        // build_run_command_from_container(&mut command, &container);
 
-        let id = run_and_wait_for_command(command)?.trim().to_string();
+        // let id = run_and_wait_for_command(command)?.trim().to_string();
 
-        let handle = DockerHandle {
-            instance: ContainerInstance::new(id, container),
-            docker: self.clone(),
-        };
+        // let handle = DockerHandle {
+        //     instance: ContainerInstance::new(id, container),
+        //     docker: self.clone(),
+        // };
 
-        match &handle.instance.container.wait_strategy {
-            Some(strategy) => self.wait_for(&handle, strategy)?,
-            None => {}
-        };
+        // match &handle.instance.container.wait_strategy {
+        //     Some(strategy) => self.wait_for(&handle, strategy)?,
+        //     None => {}
+        // };
 
-        Ok(handle)
+        // Ok(handle)
     }
 }
 
 pub struct DockerHandle {
-    instance: ContainerInstance,
+    instance: Option<ContainerInstance>,
+    container: Container,
     docker: Docker,
 }
 
 impl ContainerHandle for DockerHandle {
-    fn start(& mut self) -> Result<()> {
+    fn run(&mut self) -> Result<()> {
         todo!()
     }
 
-    fn stop(& mut self) -> Result<()> {
+    fn stop(&mut self) -> Result<()> {
         todo!()
     }
 
-    fn rm(& mut self) -> Result<()> {
+    fn rm(&mut self) -> Result<()> {
         todo!()
     }
 
@@ -77,5 +88,9 @@ impl ContainerHandle for DockerHandle {
 
     fn container(&self) -> &Container {
         todo!()
+    }
+
+    fn instance(&self) -> Option<&ContainerInstance> {
+        self.instance.as_ref()
     }
 }

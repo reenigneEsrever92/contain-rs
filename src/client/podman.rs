@@ -17,9 +17,9 @@ use crate::{
 
 use super::{
     shared::{
-        build_log_command, build_ps_command, build_rm_command, build_run_command,
-        build_run_command_from_container, build_stop_command, do_log, run_and_wait_for_command,
-        wait_for_log,
+        build_log_command, build_ps_command, build_rm_command,
+        build_run_command, build_stop_command, do_log, run_and_wait_for_command,
+        wait_for, wait_for_log,
     },
     Client, ContainerHandle,
 };
@@ -44,7 +44,7 @@ impl Podman {
     pub fn ps(&self) -> Result<Vec<PodmanContainer>> {
         let mut command = self.build_command();
 
-        build_ps_command(& mut command);
+        build_ps_command(&mut command);
 
         let result = run_and_wait_for_command(command);
 
@@ -72,55 +72,30 @@ impl Podman {
 
         command
     }
-
-    fn wait_for(&self, handle: &PodmanHandle, strategy: &WaitStrategy) -> Result<()> {
-        let mut command = self.build_command();
-
-        build_log_command(& mut command, &handle.instance);
-
-        match strategy {
-            WaitStrategy::LogMessage { pattern } => match do_log(command) {
-                Ok(log) => wait_for_log(&handle.instance, &pattern, log),
-                Err(e) => Err(Context::new()
-                    .source(e)
-                    .info("message", "Waiting for log output failed")
-                    .into_error(ErrorType::LogError)),
-            },
-            WaitStrategy::HealthCheck { check: _ } => self.wait_for_health_check(handle),
-        }
-    }
-
-    fn wait_for_health_check(&self, handle: &PodmanHandle) -> Result<()> {
-        thread::sleep(Duration::from_secs(10));
-
-        match run_and_wait_for_command(self.build_health_check_command(&handle.instance)) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Context::new()
-                .info("reason", "Healthcheck failed")
-                .source(e)
-                .into_error(ErrorType::WaitError)),
-        }
-    }
 }
-
+///
+/// A client implementation for podman.
+///
+/// ```
+/// use contain_rs::{ client::{ Client, ContainerHandle, podman::{ Podman, PodmanHandle } }, image::postgres::Postgres };
+///
+/// let podman = Podman::new();
+/// let container = Postgres::default().with_password("password").container();
+///
+/// let mut handle = podman.create(container).unwrap();
+/// 
+/// assert!(handle.run().is_ok());
+/// ```
+///
+///
 impl Client for Podman {
     type ContainerHandle = PodmanHandle;
 
     fn create(&self, container: Container) -> Result<Self::ContainerHandle> {
-        let mut command = self.build_command();
-
-        build_run_command_from_container(& mut command, &container);
-
-        let id = run_and_wait_for_command(command)?.trim().to_string();
-
         let handle = PodmanHandle {
-            instance: ContainerInstance::new(id, container),
+            instance: None,
+            container,
             podman: self.clone(),
-        };
-
-        match &handle.instance.container.wait_strategy {
-            Some(strategy) => self.wait_for(&handle, strategy)?,
-            None => {}
         };
 
         Ok(handle)
@@ -128,48 +103,86 @@ impl Client for Podman {
 }
 
 pub struct PodmanHandle {
-    instance: ContainerInstance,
+    instance: Option<ContainerInstance>,
+    container: Container,
     podman: Podman,
+}
+
+impl PodmanHandle {
+    pub fn do_if_running<R, T: FnOnce(&PodmanHandle, &ContainerInstance) -> Result<R>>(
+        &self,
+        func: T,
+    ) -> Result<R> {
+        match self.instance() {
+            Some(instance) => func(self, instance),
+            None => Err(Context::new()
+                .info("message", "Container is not running")
+                .into_error(ErrorType::ContainerStateError)),
+        }
+    }
+
+    pub fn do_if_not_running<R, T: FnOnce(& mut PodmanHandle) -> Result<R>>(& mut self, func: T) -> Result<R> {
+        match self.instance() {
+            Some(instance) => Err(Context::new()
+                .info("message", "Container is already running")
+                .into_error(ErrorType::ContainerStateError)),
+            None => func(self),
+        }
+    }
 }
 
 impl ContainerHandle for PodmanHandle {
     fn stop(&mut self) -> Result<()> {
-        let mut command = self.podman.build_command();
+        self.do_if_running(|handle, instance| {
+            let mut command = handle.podman.build_command();
 
-        build_stop_command(& mut command, &self.instance);
-        run_and_wait_for_command(command)?;
+            build_stop_command(&mut command, &instance);
+            run_and_wait_for_command(command)?;
 
-        Ok(())
+            Ok(())
+        })
     }
 
     fn log(&self) -> Result<Box<dyn BufRead>> {
-        let mut command = self.podman.build_command();
+        self.do_if_running(|handle, instance| {
+            let mut command = handle.podman.build_command();
 
-        build_log_command(& mut command, &self.instance);
+            build_log_command(&mut command, instance);
 
-        do_log(command)
+            do_log(command)
+        })
     }
 
     fn container(&self) -> &Container {
-        &self.instance.container
+        &self.container
     }
 
-    fn start(&mut self) -> Result<()> {
-        let mut command = self.podman.build_command();
+    fn run(&mut self) -> Result<()> {
+        self.do_if_not_running(|handle| {
+            let mut command = handle.podman.build_command();
 
-        build_run_command(& mut command, &self.instance);
-        run_and_wait_for_command(command)?;
+            build_run_command(&mut command, handle.container());
+            let id = run_and_wait_for_command(command)?.trim().to_string();
 
-        Ok(())
+            handle.instance = Some(ContainerInstance::new(id));
+
+            Ok(())
+        })
     }
 
     fn rm(&mut self) -> Result<()> {
-        let mut command = self.podman.build_command();
+        self.do_if_running(|handle, instance| {
+            let mut command = self.podman.build_command();
 
-        build_rm_command(& mut command, &self.instance);
-        run_and_wait_for_command(command)?;
+            build_rm_command(&mut command, instance);
+            run_and_wait_for_command(command)?;
 
-        Ok(())
+            Ok(())
+        })
+    }
+
+    fn instance(&self) -> Option<&ContainerInstance> {
+        self.instance.as_ref()
     }
 }
 
@@ -177,36 +190,5 @@ impl Drop for PodmanHandle {
     fn drop(&mut self) {
         self.stop().unwrap();
         self.rm().unwrap();
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::{client::Client, container::Container, image::Image};
-
-    use super::Podman;
-
-    #[test]
-    fn test_scope() {
-        {
-            let handle = Podman::new()
-                .create(Container::from_image(Image::from_name("nginx")))
-                .unwrap();
-        }
-    }
-
-    #[test]
-    fn test_wait_for_healthcheck() {
-        // pretty_env_logger::formatted_timed_builder()
-        //     .filter_level(log::LevelFilter::Debug)
-        //     .init();
-
-        // let handle = Podman::new()
-        //     .create(Container::from_image(Image::from_name("nginx")).wait_for(
-        //         crate::container::WaitStrategy::HealthCheck {
-        //             check: HealthCheck::new("curl http://localhost || exit 1".to_string()),
-        //         },
-        //     ))
-        //     .unwrap();
     }
 }

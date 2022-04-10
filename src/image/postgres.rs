@@ -1,3 +1,10 @@
+/// 
+/// This module provides postgres image utilities.
+/// 
+/// ## Usage:
+/// 
+/// 
+
 use std::str::FromStr;
 
 use regex::Regex;
@@ -11,7 +18,7 @@ pub struct Postgres {
 }
 
 impl Postgres {
-    const IMAGE: &'static str = "postgres";
+    const IMAGE: &'static str = "docker.io/library/postgres";
 
     pub fn default() -> Self {
         Self {
@@ -50,6 +57,7 @@ mod test {
 
         let mut handle = client.create(container).unwrap();
 
+        handle.run().unwrap();
         handle.stop().unwrap();
     }
 }
