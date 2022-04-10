@@ -9,8 +9,9 @@ A tool to use docker / podman / oci containers with rust
 - [ ] trace errors
 - [x] improve error types
 - [ ] improve error reporting
-- [ ] handle std error for child processes
+- [x] handle std error for child processes
 - [ ] complete podman implementation
 - [ ] complete docker implementation
 - [ ] extract comman parts into shared module
+- [ ] add a few images
 

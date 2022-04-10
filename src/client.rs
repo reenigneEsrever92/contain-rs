@@ -4,6 +4,7 @@ use crate::{container::Container, error::Result};
 
 pub mod docker;
 pub mod podman;
+pub mod shared;
 
 pub trait Client {
     type ContainerHandle: ContainerHandle;
