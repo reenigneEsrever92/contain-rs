@@ -58,13 +58,19 @@ pub struct Network {
 
 #[derive(Clone)]
 pub struct Port {
-    number: String,
+    pub number: String,
+}
+
+impl From<&str> for Port {
+    fn from(s: &str) -> Self {
+        Self { number: s.to_string() }
+    }
 }
 
 #[derive(Clone)]
 pub struct PortMapping {
-    source: Port,
-    target: Port,
+    pub source: Port,
+    pub target: Port,
 }
 
 #[derive(Clone)]

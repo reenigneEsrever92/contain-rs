@@ -75,6 +75,7 @@ pub fn build_run_command<'a>(
     add_env_var_args(command, container);
     add_image_arg(command, container);
     add_wait_strategy_args(command, container);
+    add_export_ports_args(command, container);
 
     command
 }
@@ -127,6 +128,12 @@ fn add_health_check_args(command: & mut Command, check: &HealthCheck) {
 
 fn add_image_arg(command: & mut Command, container: &Container) {
     command.arg(String::from(&container.image));
+}
+
+fn add_export_ports_args(command: & mut Command, container: &Container) {
+    container.port_mappings.iter().for_each(|port_mapping| {
+        command.arg("-p").arg(format!("{}:{}", port_mapping.source.number, port_mapping.target.number));
+    })
 }
 
 pub fn wait_for_log(

@@ -6,7 +6,6 @@ use crate::{
 };
 
 use super::{
-    shared::{build_run_command, run_and_wait_for_command},
     Client, ContainerHandle,
 };
 
@@ -35,9 +34,6 @@ impl Docker {
     }
 }
 
-///
-///
-///
 impl Client for Docker {
     type ContainerHandle = DockerHandle;
 

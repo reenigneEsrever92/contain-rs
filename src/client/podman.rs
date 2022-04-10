@@ -1,14 +1,10 @@
 use std::{
-    io::{BufRead, BufReader},
-    process::{Command, Stdio},
-    thread,
-    time::Duration,
+    io::{BufRead},
+    process::{Command},
 };
 
-use log::debug;
-use regex::Regex;
 use serde::Deserialize;
-use tracing_error::SpanTrace;
+
 
 use crate::{
     container::*,
@@ -19,7 +15,6 @@ use super::{
     shared::{
         build_log_command, build_ps_command, build_rm_command,
         build_run_command, build_stop_command, do_log, run_and_wait_for_command,
-        wait_for, wait_for_log,
     },
     Client, ContainerHandle,
 };
@@ -73,11 +68,12 @@ impl Podman {
         command
     }
 }
+
 ///
 /// A client implementation for podman.
 ///
 /// ```
-/// use contain_rs::{ client::{ Client, ContainerHandle, podman::{ Podman, PodmanHandle } }, image::postgres::Postgres };
+/// use contain_rs::{ client::{ Client, ContainerHandle, podman::Podman }, image::postgres::Postgres };
 ///
 /// let podman = Podman::new();
 /// let container = Postgres::default().with_password("password").container();

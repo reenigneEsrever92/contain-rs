@@ -5,11 +5,12 @@ A tool to use docker / podman / oci containers with rust
 
 ## TODO
 
-- [ ] implement healthcheck wait strategy
-- [ ] trace errors
 - [x] improve error types
-- [ ] improve error reporting
+- [x] improve error reporting
 - [x] handle std error for child processes
+- [ ] implement exposed ports
+- [ ] implement healthcheck wait strategy
+- [ ] add error span traces
 - [ ] complete podman implementation
 - [ ] complete docker implementation
 - [ ] extract comman parts into shared module
