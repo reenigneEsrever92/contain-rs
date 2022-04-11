@@ -1,10 +1,6 @@
-use std::{
-    io::{BufRead},
-    process::{Command},
-};
+use std::{io::BufRead, process::Command};
 
 use serde::Deserialize;
-
 
 use crate::{
     container::*,
@@ -13,8 +9,8 @@ use crate::{
 
 use super::{
     shared::{
-        build_log_command, build_ps_command, build_rm_command,
-        build_run_command, build_stop_command, do_log, run_and_wait_for_command,
+        build_log_command, build_ps_command, build_rm_command, build_run_command,
+        build_stop_command, do_log, run_and_wait_for_command,
     },
     Client, ContainerHandle,
 };
@@ -78,8 +74,8 @@ impl Podman {
 /// let podman = Podman::new();
 /// let container = Postgres::default().with_password("password").container();
 ///
-/// let mut handle = podman.create(container).unwrap();
-/// 
+/// let mut handle = podman.create(container);
+///
 /// assert!(handle.run().is_ok());
 /// ```
 ///
@@ -87,14 +83,12 @@ impl Podman {
 impl Client for Podman {
     type ContainerHandle = PodmanHandle;
 
-    fn create(&self, container: Container) -> Result<Self::ContainerHandle> {
-        let handle = PodmanHandle {
+    fn create(&self, container: Container) -> Self::ContainerHandle {
+        PodmanHandle {
             instance: None,
             container,
             podman: self.clone(),
-        };
-
-        Ok(handle)
+        }
     }
 }
 
@@ -105,22 +99,26 @@ pub struct PodmanHandle {
 }
 
 impl PodmanHandle {
-    pub fn do_if_running<R, T: FnOnce(&PodmanHandle, &ContainerInstance) -> Result<R>>(
-        &self,
+    pub fn do_if_running<R, T: FnOnce(&mut PodmanHandle) -> Result<R>>(
+        &mut self,
         func: T,
     ) -> Result<R> {
         match self.instance() {
-            Some(instance) => func(self, instance),
+            Some(instance) => func(self),
             None => Err(Context::new()
                 .info("message", "Container is not running")
                 .into_error(ErrorType::ContainerStateError)),
         }
     }
 
-    pub fn do_if_not_running<R, T: FnOnce(& mut PodmanHandle) -> Result<R>>(& mut self, func: T) -> Result<R> {
+    pub fn do_if_not_running<R, T: FnOnce(&mut PodmanHandle) -> Result<R>>(
+        &mut self,
+        func: T,
+    ) -> Result<R> {
         match self.instance() {
             Some(instance) => Err(Context::new()
                 .info("message", "Container is already running")
+                .info("container", &instance.id)
                 .into_error(ErrorType::ContainerStateError)),
             None => func(self),
         }
@@ -128,31 +126,6 @@ impl PodmanHandle {
 }
 
 impl ContainerHandle for PodmanHandle {
-    fn stop(&mut self) -> Result<()> {
-        self.do_if_running(|handle, instance| {
-            let mut command = handle.podman.build_command();
-
-            build_stop_command(&mut command, &instance);
-            run_and_wait_for_command(command)?;
-
-            Ok(())
-        })
-    }
-
-    fn log(&self) -> Result<Box<dyn BufRead>> {
-        self.do_if_running(|handle, instance| {
-            let mut command = handle.podman.build_command();
-
-            build_log_command(&mut command, instance);
-
-            do_log(command)
-        })
-    }
-
-    fn container(&self) -> &Container {
-        &self.container
-    }
-
     fn run(&mut self) -> Result<()> {
         self.do_if_not_running(|handle| {
             let mut command = handle.podman.build_command();
@@ -166,25 +139,57 @@ impl ContainerHandle for PodmanHandle {
         })
     }
 
-    fn rm(&mut self) -> Result<()> {
-        self.do_if_running(|handle, instance| {
-            let mut command = self.podman.build_command();
+    fn stop(&mut self) -> Result<()> {
+        self.do_if_running(|handle| {
+            let mut command = handle.podman.build_command();
 
-            build_rm_command(&mut command, instance);
+            build_stop_command(&mut command, handle.instance().unwrap());
+            run_and_wait_for_command(command)?;
+
+            handle.instance = None;
+
+            Ok(())
+        })
+    }
+
+    fn rm(&mut self) -> Result<()> {
+        self.do_if_running(|handle| {
+            let mut command = handle.podman.build_command();
+
+            build_rm_command(&mut command, handle.instance().unwrap());
             run_and_wait_for_command(command)?;
 
             Ok(())
         })
     }
 
+    fn log(& mut self) -> Result<Box<dyn BufRead>> {
+        self.do_if_running(|handle| {
+            let mut command = handle.podman.build_command();
+
+            build_log_command(&mut command, handle.instance().unwrap());
+
+            do_log(command)
+        })
+    }
+
+    fn container(&self) -> &Container {
+        &self.container
+    }
+
     fn instance(&self) -> Option<&ContainerInstance> {
         self.instance.as_ref()
+    }
+
+    fn is_running(&self) -> bool {
+        self.instance().is_some()
     }
 }
 
 impl Drop for PodmanHandle {
     fn drop(&mut self) {
-        self.stop().unwrap();
-        self.rm().unwrap();
+        if self.is_running() {
+            self.rm().unwrap();
+        }
     }
 }

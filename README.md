@@ -8,11 +8,11 @@ A tool to use docker / podman / oci containers with rust
 - [x] improve error types
 - [x] improve error reporting
 - [x] handle std error for child processes
-- [ ] implement exposed ports
+- [x] implement exposed ports
+- [ ] check status before running commands
+- [ ] add docker implementation
 - [ ] implement healthcheck wait strategy
 - [ ] add error span traces
-- [ ] complete podman implementation
-- [ ] complete docker implementation
 - [ ] extract comman parts into shared module
 - [ ] add a few images
 

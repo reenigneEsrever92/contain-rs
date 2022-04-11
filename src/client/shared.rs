@@ -73,9 +73,9 @@ pub fn build_run_command<'a>(
 ) -> &'a Command {
     add_run_args(command);
     add_env_var_args(command, container);
+    add_export_ports_args(command, container);
     add_image_arg(command, container);
     add_wait_strategy_args(command, container);
-    add_export_ports_args(command, container);
 
     command
 }
@@ -132,7 +132,7 @@ fn add_image_arg(command: & mut Command, container: &Container) {
 
 fn add_export_ports_args(command: & mut Command, container: &Container) {
     container.port_mappings.iter().for_each(|port_mapping| {
-        command.arg("-p").arg(format!("{}:{}", port_mapping.source.number, port_mapping.target.number));
+        command.arg(format!("-p{}:{}", port_mapping.source.number, port_mapping.target.number));
     })
 }
 

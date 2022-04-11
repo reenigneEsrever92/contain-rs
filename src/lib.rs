@@ -16,7 +16,7 @@
 //! 
 //! let container = Container::from_image(Image::from_name("docker.io/library/nginx"));
 //! 
-//! let mut handle = podman.create(container).unwrap();
+//! let mut handle = podman.create(container);
 //! 
 //! assert!(handle.run().is_ok());
 //! 

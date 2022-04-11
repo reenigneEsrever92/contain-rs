@@ -9,16 +9,17 @@ pub mod shared;
 pub trait Client {
     type ContainerHandle: ContainerHandle;
 
-    fn create(&self, container: Container) -> Result<Self::ContainerHandle>;
+    fn create(&self, container: Container) -> Self::ContainerHandle;
 }
 
 pub trait ContainerHandle {
     fn run(& mut self) -> Result<()>;
     fn stop(& mut self) -> Result<()>;
     fn rm(& mut self) -> Result<()>;
-    fn log(&self) -> Result<Box<dyn BufRead>>;
+    fn log(& mut self) -> Result<Box<dyn BufRead>>;
     fn container(&self) -> &Container;
     fn instance(&self) -> Option<&ContainerInstance>;
+    fn is_running(&self) -> bool;
 }
 
 pub trait LogStream {
