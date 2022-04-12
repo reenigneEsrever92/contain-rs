@@ -242,16 +242,6 @@ impl ContainerHandle for PodmanHandle {
     fn is_running(&self) -> bool {
         self.instance().is_some()
     }
-
-    fn get_exposed_port<T: Into<Port>>(&self, p: T) -> Option<Port> {
-        let port: Port = p.into();
-
-        self.container().port_mappings
-            .iter()
-            .filter(|mapping| mapping.target == port)
-            .next()
-            .map(|mapping| mapping.to_owned().source)
-    }
 }
 
 impl Drop for PodmanHandle {
