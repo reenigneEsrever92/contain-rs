@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use rand::Rng;
 use regex::Regex;
 
 use crate::image::Image;
@@ -56,14 +57,24 @@ pub struct Network {
     // TODO
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Port {
     pub number: String,
 }
 
 impl From<&str> for Port {
     fn from(s: &str) -> Self {
-        Self { number: s.to_string() }
+        Self {
+            number: s.to_string(),
+        }
+    }
+}
+
+impl From<i32> for Port {
+    fn from(s: i32) -> Self {
+        Self {
+            number: s.to_string(),
+        }
     }
 }
 
@@ -115,13 +126,21 @@ impl Container {
         }
     }
 
-    pub fn expose_port<'a>(
+    pub fn map_port<'a>(
         &'a mut self,
         source: impl Into<Port>,
         target: impl Into<Port>,
     ) -> &'a Self {
         self.port_mappings.push(PortMapping {
             source: source.into(),
+            target: target.into(),
+        });
+        self
+    }
+
+    pub fn expose_port<'a>(&'a mut self, target: impl Into<Port>) -> &'a Self {
+        self.port_mappings.push(PortMapping {
+            source: rand::thread_rng().gen_range(30000..=31000).into(),
             target: target.into(),
         });
         self

@@ -1,6 +1,6 @@
 use std::io::BufRead;
 
-use crate::{container::Container, error::Result, rt::ContainerInstance};
+use crate::{container::{Container, Port}, error::Result, rt::ContainerInstance};
 
 pub mod docker;
 pub mod podman;
@@ -20,6 +20,7 @@ pub trait ContainerHandle {
     fn container(&self) -> &Container;
     fn instance(&self) -> Option<&ContainerInstance>;
     fn is_running(&self) -> bool;
+    fn get_exposed_port<T: Into<Port>>(&self, p: T) -> Option<Port>;
 }
 
 pub trait LogStream {
