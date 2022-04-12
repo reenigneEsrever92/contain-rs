@@ -7,7 +7,8 @@ use log::debug;
 use regex::Regex;
 
 use crate::{
-    container::{Container, ContainerInstance, HealthCheck, WaitStrategy},
+    rt::ContainerInstance,
+    container::{Container, HealthCheck, WaitStrategy},
     error::{Context, ErrorType, Result},
 };
 
@@ -47,13 +48,13 @@ pub fn run_and_wait_for_command(mut command: Command) -> Result<String> {
 
 pub fn build_log_command<'a>(
     command: &'a mut Command,
-    instance: &ContainerInstance,
+    id: &str,
 ) -> &'a Command {
-    command.arg("logs").arg("-f").arg(&instance.id)
+    command.arg("logs").arg("-f").arg(id)
 }
 
-pub fn build_rm_command<'a>(command: &'a mut Command, instance: &ContainerInstance) -> &'a Command {
-    command.arg("rm").arg("-f").arg(&instance.id)
+pub fn build_rm_command<'a>(command: &'a mut Command, id: &str) -> &'a Command {
+    command.arg("rm").arg("-f").arg(id)
 }
 
 pub fn build_ps_command<'a>(command: &'a mut Command) -> &'a Command {
@@ -62,15 +63,12 @@ pub fn build_ps_command<'a>(command: &'a mut Command) -> &'a Command {
 
 pub fn build_stop_command<'a>(
     command: &'a mut Command,
-    instance: &ContainerInstance,
+    id: &str,
 ) -> &'a Command {
-    command.arg("stop").arg(&instance.id)
+    command.arg("stop").arg(id)
 }
 
-pub fn build_run_command<'a>(
-    command: &'a mut Command,
-    container: &Container,
-) -> &'a Command {
+pub fn build_run_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
     add_run_args(command);
     add_env_var_args(command, container);
     add_export_ports_args(command, container);
@@ -80,11 +78,15 @@ pub fn build_run_command<'a>(
     command
 }
 
-fn add_run_args(command: & mut Command) {
+pub fn build_inspect_command<'a>(command: &'a mut Command, instance: &ContainerInstance) -> &'a Command {
+    command.arg("inspect").arg(&instance.id)
+}
+
+fn add_run_args(command: &mut Command) {
     command.arg("run").arg("-d");
 }
 
-fn add_env_var_args(command: & mut Command, container: &Container) {
+fn add_env_var_args(command: &mut Command, container: &Container) {
     container.env_vars.iter().for_each(|env_var| {
         command
             .arg("-e")
@@ -92,7 +94,7 @@ fn add_env_var_args(command: & mut Command, container: &Container) {
     });
 }
 
-fn add_wait_strategy_args(command: & mut Command, container: &Container) {
+fn add_wait_strategy_args(command: &mut Command, container: &Container) {
     match &container.wait_strategy {
         Some(strategy) => match strategy {
             WaitStrategy::LogMessage { pattern: _ } => {}
@@ -102,7 +104,7 @@ fn add_wait_strategy_args(command: & mut Command, container: &Container) {
     }
 }
 
-fn add_health_check_args(command: & mut Command, check: &HealthCheck) {
+fn add_health_check_args(command: &mut Command, check: &HealthCheck) {
     command
         .arg("--healthcheck-command")
         .arg(format!("CMD-SHELL {}", check.command));
@@ -126,13 +128,16 @@ fn add_health_check_args(command: & mut Command, check: &HealthCheck) {
     }
 }
 
-fn add_image_arg(command: & mut Command, container: &Container) {
+fn add_image_arg(command: &mut Command, container: &Container) {
     command.arg(String::from(&container.image));
 }
 
-fn add_export_ports_args(command: & mut Command, container: &Container) {
+fn add_export_ports_args(command: &mut Command, container: &Container) {
     container.port_mappings.iter().for_each(|port_mapping| {
-        command.arg(format!("-p{}:{}", port_mapping.source.number, port_mapping.target.number));
+        command.arg(format!(
+            "-p{}:{}",
+            port_mapping.source.number, port_mapping.target.number
+        ));
     })
 }
 
@@ -182,8 +187,12 @@ pub fn do_log(mut log_command: Command) -> Result<Box<dyn BufRead>> {
     }
 }
 
-pub fn wait_for(mut command: Command, instance: &ContainerInstance, strategy: &WaitStrategy) -> Result<()> {
-    build_log_command(& mut command, instance);
+pub fn wait_for(
+    mut command: Command,
+    instance: &ContainerInstance,
+    strategy: &WaitStrategy,
+) -> Result<()> {
+    build_log_command(&mut command, &instance.id);
 
     match strategy {
         WaitStrategy::LogMessage { pattern } => match do_log(command) {

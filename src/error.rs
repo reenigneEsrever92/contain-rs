@@ -12,6 +12,7 @@ pub enum ErrorType {
     LogError,
     WaitError,
     PsError,
+    InspectError,
 }
 
 #[derive(Debug)]
@@ -86,11 +87,12 @@ impl Display for ErrorType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ErrorType::Unrecoverable => write!(f, "Unrecoverable Error"),
-            ErrorType::ContainerStateError=> write!(f, "Container Is Not Running"),
+            ErrorType::ContainerStateError => write!(f, "Container Is Not Running"),
             ErrorType::CommandError => write!(f, "Command Error"),
             ErrorType::LogError => write!(f, "Log Error"),
             ErrorType::WaitError => write!(f, "Wait Error"),
             ErrorType::PsError => write!(f, "Ps Error"),
+            ErrorType::InspectError => write!(f, "Inspect Error"),
             _ => todo!(),
         }
     }

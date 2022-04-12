@@ -5,12 +5,13 @@ use serde::Deserialize;
 use crate::{
     container::*,
     error::{Context, ErrorType, Result},
+    rt::{ContainerInfo, ContainerInstance},
 };
 
 use super::{
     shared::{
-        build_log_command, build_ps_command, build_rm_command, build_run_command,
-        build_stop_command, do_log, run_and_wait_for_command,
+        build_inspect_command, build_log_command, build_ps_command, build_rm_command,
+        build_run_command, build_stop_command, do_log, run_and_wait_for_command,
     },
     Client, ContainerHandle,
 };
@@ -18,6 +19,11 @@ use super::{
 #[derive(Deserialize)]
 pub struct PodmanContainer {
     names: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct PodmanContainerDescription {
+    name: String,
 }
 
 #[derive(Clone)]
@@ -49,6 +55,31 @@ impl Podman {
                     .into_error(ErrorType::PsError)),
             },
             Err(e) => Err(Context::new().source(e).into_error(ErrorType::PsError)),
+        }
+    }
+
+    pub fn inspect(&self, instance: &ContainerInstance) -> Result<ContainerInfo> {
+        let mut command = self.build_command();
+
+        build_inspect_command(&mut command, instance);
+
+        let json = run_and_wait_for_command(command)?;
+
+        let container_info: serde_json::Result<Vec<ContainerInfo>> = serde_json::from_str(&json);
+
+        match container_info {
+            Ok(infos) => match infos.get(0) {
+                Some(info) => Ok(info.to_owned()),
+                None => Err(Context::new()
+                    .info("message", "could not inspect container")
+                    .info("json", &json)
+                    .into_error(ErrorType::InspectError)),
+            },
+            Err(e) => Err(Context::new()
+                .source(e)
+                .info("message", "could not parse inspect output")
+                .info("json", &json)
+                .into_error(ErrorType::InspectError)),
         }
     }
 
@@ -99,14 +130,43 @@ pub struct PodmanHandle {
 }
 
 impl PodmanHandle {
-    pub fn do_if_running<R, T: FnOnce(&mut PodmanHandle) -> Result<R>>(
+    pub fn try_if_running<T: FnOnce(&mut PodmanHandle, ContainerInfo) -> Result<()>>(
+        &mut self,
+        func: T,
+    ) -> Result<()> {
+        match self.instance() {
+            Some(instance) => {
+                let info = self.podman.inspect(instance)?;
+                if info.state.running {
+                    return func(self, info);
+                } else {
+                    Ok(())
+                }
+            }
+            None => Ok(()),
+        }
+    }
+
+    pub fn do_if_running<R, T: FnOnce(&mut PodmanHandle, ContainerInfo) -> Result<R>>(
         &mut self,
         func: T,
     ) -> Result<R> {
         match self.instance() {
-            Some(instance) => func(self),
+            Some(instance) => {
+                let info = self.podman.inspect(instance)?;
+                if info.state.running {
+                    return func(self, info);
+                } else {
+                    Err(Context::new()
+                        .info("message", "Container is not running")
+                        .into_error(ErrorType::ContainerStateError))
+                }
+            }
             None => Err(Context::new()
-                .info("message", "Container is not running")
+                .info(
+                    "message",
+                    "Container does not exist. Maybe you need to run it first?",
+                )
                 .into_error(ErrorType::ContainerStateError)),
         }
     }
@@ -140,34 +200,32 @@ impl ContainerHandle for PodmanHandle {
     }
 
     fn stop(&mut self) -> Result<()> {
-        self.do_if_running(|handle| {
+        self.try_if_running(|handle, info| {
             let mut command = handle.podman.build_command();
 
-            build_stop_command(&mut command, handle.instance().unwrap());
+            build_stop_command(&mut command, &info.id);
             run_and_wait_for_command(command)?;
-
-            handle.instance = None;
 
             Ok(())
         })
     }
 
     fn rm(&mut self) -> Result<()> {
-        self.do_if_running(|handle| {
+        self.try_if_running(|handle, info| {
             let mut command = handle.podman.build_command();
 
-            build_rm_command(&mut command, handle.instance().unwrap());
+            build_rm_command(&mut command, &info.id);
             run_and_wait_for_command(command)?;
 
             Ok(())
         })
     }
 
-    fn log(& mut self) -> Result<Box<dyn BufRead>> {
-        self.do_if_running(|handle| {
+    fn log(&mut self) -> Result<Box<dyn BufRead>> {
+        self.do_if_running(|handle, info| {
             let mut command = handle.podman.build_command();
 
-            build_log_command(&mut command, handle.instance().unwrap());
+            build_log_command(&mut command, &info.id);
 
             do_log(command)
         })
@@ -188,8 +246,7 @@ impl ContainerHandle for PodmanHandle {
 
 impl Drop for PodmanHandle {
     fn drop(&mut self) {
-        if self.is_running() {
-            self.rm().unwrap();
-        }
+        self.stop().unwrap();
+        self.rm().unwrap();
     }
 }
