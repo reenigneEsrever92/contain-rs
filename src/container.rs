@@ -1,6 +1,6 @@
-use std::time::Duration;
+use std::{collections::hash_map::DefaultHasher, time::Duration};
 
-use rand::Rng;
+use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
 use crate::image::Image;
@@ -108,6 +108,7 @@ where
 
 #[derive(Clone)]
 pub struct Container {
+    pub name: String,
     pub image: Image,
     pub network: Option<Network>,
     pub port_mappings: Vec<PortMapping>,
@@ -116,14 +117,28 @@ pub struct Container {
 }
 
 impl Container {
+    fn gen_hash() -> String {
+        rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(8)
+            .map(char::from)
+            .collect()
+    }
+
     pub fn from_image(image: Image) -> Self {
         Container {
+            name: format!("contain-rs-{}", Self::gen_hash()),
             image,
             network: None,
             port_mappings: Vec::new(),
             env_vars: Vec::new(),
             wait_strategy: None,
         }
+    }
+
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = name.into();
+        self
     }
 
     pub fn map_port<'a>(
@@ -133,14 +148,6 @@ impl Container {
     ) -> &'a Self {
         self.port_mappings.push(PortMapping {
             source: source.into(),
-            target: target.into(),
-        });
-        self
-    }
-
-    pub fn expose_port<'a>(&'a mut self, target: impl Into<Port>) -> &'a Self {
-        self.port_mappings.push(PortMapping {
-            source: rand::thread_rng().gen_range(30000..=31000).into(),
             target: target.into(),
         });
         self

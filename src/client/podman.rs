@@ -12,6 +12,7 @@ use super::{
     shared::{
         build_inspect_command, build_log_command, build_ps_command, build_rm_command,
         build_run_command, build_stop_command, do_log, run_and_wait_for_command,
+        run_and_wait_for_command_infallible,
     },
     Client, ContainerHandle,
 };
@@ -43,18 +44,38 @@ impl Podman {
 
         build_ps_command(&mut command);
 
-        let result = run_and_wait_for_command(command);
+        let output = run_and_wait_for_command_infallible(&mut command)?;
 
-        match result {
-            Ok(output) => match serde_json::from_str(&output) {
-                Ok(vec) => Ok(vec),
-                Err(e) => Err(Context::new()
-                    .source(e)
-                    .info("reason", "could not parse json")
-                    .info("json", &output)
-                    .into_error(ErrorType::PsError)),
-            },
-            Err(e) => Err(Context::new().source(e).into_error(ErrorType::PsError)),
+        match serde_json::from_str(&output) {
+            Ok(vec) => Ok(vec),
+            Err(e) => Err(Context::new()
+                .source(e)
+                .info("reason", "could not parse json")
+                .info("json", &output)
+                .into_error(ErrorType::JsonError)),
+        }
+    }
+
+    pub fn exists(&self, container: Container) -> Result<bool> {
+        let mut command = self.build_command();
+
+        command.arg("container").arg("exists").arg(&container.name);
+
+        let output = run_and_wait_for_command(&mut command)?;
+
+        match output.status.code() {
+            Some(0) => Ok(true),
+            Some(1) => Ok(false),
+            Some(code) => Err(Context::new()
+                .info("message", "exists command failed")
+                .info("code", &code)
+                .into_error(ErrorType::CommandError)),
+            None => panic!(
+                "{}",
+                Context::new()
+                    .info("message", "command exitted with no status code")
+                    .into_error(ErrorType::Unrecoverable)
+            ),
         }
     }
 
@@ -63,7 +84,7 @@ impl Podman {
 
         build_inspect_command(&mut command, instance);
 
-        let json = run_and_wait_for_command(command)?;
+        let json = run_and_wait_for_command_infallible(&mut command)?;
 
         let container_info: serde_json::Result<Vec<ContainerInfo>> = serde_json::from_str(&json);
 
@@ -79,7 +100,7 @@ impl Podman {
                 .source(e)
                 .info("message", "could not parse inspect output")
                 .info("json", &json)
-                .into_error(ErrorType::InspectError)),
+                .into_error(ErrorType::JsonError)),
         }
     }
 
@@ -130,6 +151,14 @@ pub struct PodmanHandle {
 }
 
 impl PodmanHandle {
+    pub fn exists(&self) -> bool {
+        todo!()
+    }
+
+    pub fn is_running() -> bool {
+        todo!()
+    }
+
     pub fn try_if_running<T: FnOnce(&mut PodmanHandle, ContainerInfo) -> Result<()>>(
         &mut self,
         func: T,
@@ -191,7 +220,9 @@ impl ContainerHandle for PodmanHandle {
             let mut command = handle.podman.build_command();
 
             build_run_command(&mut command, handle.container());
-            let id = run_and_wait_for_command(command)?.trim().to_string();
+            let id = run_and_wait_for_command_infallible(&mut command)?
+                .trim()
+                .to_string();
 
             handle.instance = Some(ContainerInstance::new(id));
 
@@ -203,8 +234,8 @@ impl ContainerHandle for PodmanHandle {
         self.try_if_running(|handle, info| {
             let mut command = handle.podman.build_command();
 
-            build_stop_command(&mut command, &info.id);
-            run_and_wait_for_command(command)?;
+            build_stop_command(&mut command, &handle.container.name);
+            run_and_wait_for_command_infallible(&mut command)?;
 
             Ok(())
         })
@@ -215,7 +246,7 @@ impl ContainerHandle for PodmanHandle {
             let mut command = handle.podman.build_command();
 
             build_rm_command(&mut command, &info.id);
-            run_and_wait_for_command(command)?;
+            run_and_wait_for_command_infallible(&mut command)?;
 
             Ok(())
         })

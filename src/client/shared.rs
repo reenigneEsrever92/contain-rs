@@ -1,6 +1,6 @@
 use std::{
     io::{BufRead, BufReader},
-    process::{Command, Stdio},
+    process::{Command, Stdio, Output},
 };
 
 use log::debug;
@@ -14,7 +14,27 @@ use crate::{
 
 use super::ContainerHandle;
 
-pub fn run_and_wait_for_command(mut command: Command) -> Result<String> {
+pub fn run_and_wait_for_command_infallible(command: & mut Command) -> Result<String> {
+    match run_and_wait_for_command(command) {
+        Ok(output) => {
+            if let Some(0) = output.status.code() {
+                Ok(String::from_utf8(output.stdout).unwrap())
+            } else {
+                Err(Context::new()
+                    .info("reason", "Non zero exit-code")
+                    .info("exit-code", &output.status.code().unwrap())
+                    .info("command", command)
+                    .info("stderror", &String::from_utf8(output.stderr).unwrap())
+                    .into_error(ErrorType::CommandError))
+            }
+        }
+        Err(e) => Err(Context::new()
+            .info("reason", "Io error while getting process output")
+            .into_error(ErrorType::Unrecoverable)),
+    }
+}
+
+pub fn run_and_wait_for_command(mut command: & mut Command) -> Result<Output> {
     debug!("Run and wait for command: {:?}", command);
 
     let child = command
@@ -29,16 +49,7 @@ pub fn run_and_wait_for_command(mut command: Command) -> Result<String> {
 
     match result {
         Ok(output) => {
-            if let Some(0) = output.status.code() {
-                Ok(String::from_utf8(output.stdout).unwrap())
-            } else {
-                Err(Context::new()
-                    .info("reason", "Non zero exit-code")
-                    .info("exit-code", &output.status.code().unwrap())
-                    .info("command", &command)
-                    .info("stderror", &String::from_utf8(output.stderr).unwrap())
-                    .into_error(ErrorType::CommandError))
-            }
+            Ok(output)
         }
         Err(e) => Err(Context::new()
             .info("reason", "Io error while getting process output")
@@ -63,19 +74,24 @@ pub fn build_ps_command<'a>(command: &'a mut Command) -> &'a Command {
 
 pub fn build_stop_command<'a>(
     command: &'a mut Command,
-    id: &str,
+    name: &str,
 ) -> &'a Command {
-    command.arg("stop").arg(id)
+    command.arg("stop").arg(name)
 }
 
 pub fn build_run_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
     add_run_args(command);
+    add_name_arg(command, container);
     add_env_var_args(command, container);
     add_export_ports_args(command, container);
     add_image_arg(command, container);
     add_wait_strategy_args(command, container);
 
     command
+}
+
+fn add_name_arg<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
+    command.arg("--name").arg(&container.name)
 }
 
 pub fn build_inspect_command<'a>(command: &'a mut Command, instance: &ContainerInstance) -> &'a Command {

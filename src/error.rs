@@ -9,6 +9,7 @@ pub enum ErrorType {
     Unrecoverable,
     ContainerStateError,
     CommandError,
+    JsonError,
     LogError,
     WaitError,
     PsError,
@@ -93,6 +94,7 @@ impl Display for ErrorType {
             ErrorType::WaitError => write!(f, "Wait Error"),
             ErrorType::PsError => write!(f, "Ps Error"),
             ErrorType::InspectError => write!(f, "Inspect Error"),
+            ErrorType::JsonError => write!(f, "Inspect Error"),
             _ => todo!(),
         }
     }
