@@ -2,8 +2,12 @@
 name = "contain-rs"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "Run containers with podman (or docker)"
+repository = "https://github.com/reenigneEsrever92/contain-rs"
+documentation = "https://docs.rs/contain-rs"
+readme = "README.md"
+categories = ["containers", "docker", "podman", "test"]
 
 [dependencies]
 rand = "0.8"

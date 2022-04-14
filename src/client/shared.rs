@@ -11,7 +11,7 @@ use crate::{
     error::{Context, ErrorType, Result},
 };
 
-use super::ContainerHandle;
+use super::Handle;
 
 pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<String> {
     match run_and_wait_for_command(command) {
@@ -212,7 +212,7 @@ pub fn wait_for(
     }
 }
 
-fn wait_for_health_check<T: ContainerHandle>(handle: &T) -> Result<()> {
+fn wait_for_health_check<T: Handle>(handle: &T) -> Result<()> {
     todo!()
     // thread::sleep(Duration::from_secs(10));
 

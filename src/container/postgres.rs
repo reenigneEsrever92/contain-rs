@@ -42,7 +42,7 @@ impl Postgres {
 
 #[cfg(test)]
 mod test {
-    use crate::client::{podman::Podman, Client, ContainerHandle};
+    use crate::client::{podman::Podman, Client, Handle};
 
     use super::Postgres;
 

@@ -1,7 +1,6 @@
 use contain_rs::{
-    client::{podman::Podman, Client, ContainerHandle},
-    container::Container,
-    image::Image,
+    client::{podman::Podman, Client, Handle},
+    container::{Container, Image},
 };
 use rstest::*;
 
