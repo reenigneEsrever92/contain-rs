@@ -20,7 +20,7 @@ pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<Stri
                 Ok(String::from_utf8(output.stdout).unwrap())
             } else {
                 Err(Context::new()
-                    .info("reason", "Non zero exit-code")
+                    .info("message", "Non zero exit-code")
                     .info("exit-code", &output.status.code().unwrap())
                     .info("command", command)
                     .info("stderror", &String::from_utf8(output.stderr).unwrap())
@@ -28,7 +28,8 @@ pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<Stri
             }
         }
         Err(e) => Err(Context::new()
-            .info("reason", "Io error while getting process output")
+            .info("message", "Io error while getting process output")
+            .source(e)
             .into_error(ErrorType::Unrecoverable)),
     }
 }
@@ -49,7 +50,8 @@ pub fn run_and_wait_for_command(command: &mut Command) -> Result<Output> {
     match result {
         Ok(output) => Ok(output),
         Err(e) => Err(Context::new()
-            .info("reason", "Io error while getting process output")
+            .info("message", "Io error while getting process output")
+            .source(e)
             .into_error(ErrorType::Unrecoverable)),
     }
 }
@@ -212,7 +214,8 @@ pub fn wait_for(
     }
 }
 
-fn wait_for_health_check<T: Handle>(handle: &T) -> Result<()> {
+#[allow(dead_code)]
+fn wait_for_health_check<T: Handle>(_handle: &T) -> Result<()> {
     todo!()
     // thread::sleep(Duration::from_secs(10));
 

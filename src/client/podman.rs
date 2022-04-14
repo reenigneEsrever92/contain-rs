@@ -1,7 +1,5 @@
 use std::{io::BufRead, process::Command};
 
-use serde::Deserialize;
-
 use crate::{
     container::*,
     error::{Context, ErrorType, Result},
@@ -17,6 +15,7 @@ use super::{
     Client, ContainerHandle,
 };
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct Podman {
     host: Option<String>,

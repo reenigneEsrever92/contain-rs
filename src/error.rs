@@ -62,6 +62,7 @@ pub struct ContainersError {
     pub context: Context,
 }
 
+#[allow(dead_code)]
 impl ContainersError {
     fn from_type(typ: ErrorType) -> Self {
         Self::from_type_and_context(typ, Context::new())
@@ -95,7 +96,6 @@ impl Display for ErrorType {
             ErrorType::PsError => write!(f, "Ps Error"),
             ErrorType::InspectError => write!(f, "Inspect Error"),
             ErrorType::JsonError => write!(f, "Inspect Error"),
-            _ => todo!(),
         }
     }
 }

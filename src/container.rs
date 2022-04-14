@@ -1,4 +1,4 @@
-use std::{collections::hash_map::DefaultHasher, time::Duration, fmt::Display};
+use std::{time::Duration, fmt::Display};
 
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;

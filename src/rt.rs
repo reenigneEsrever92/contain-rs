@@ -14,6 +14,7 @@ pub struct ContainerState {
     pub running: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct ProcessState {
     name: String,
