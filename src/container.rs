@@ -1,4 +1,4 @@
-use std::{time::Duration, fmt::Display};
+use std::{fmt::Display, time::Duration};
 
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
@@ -178,11 +178,7 @@ impl Container {
         self
     }
 
-    pub fn map_port<'a>(
-        &'a mut self,
-        source: impl Into<Port>,
-        target: impl Into<Port>,
-    ) -> &'a Self {
+    pub fn map_port(mut self, source: impl Into<Port>, target: impl Into<Port>) -> Self {
         self.port_mappings.push(PortMapping {
             source: source.into(),
             target: target.into(),
