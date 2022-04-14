@@ -57,7 +57,7 @@ mod test {
 
         let mut handle = client.create(container);
 
-        handle.run().unwrap();
-        handle.stop().unwrap();
+        handle.run();
+        handle.stop();
     }
 }

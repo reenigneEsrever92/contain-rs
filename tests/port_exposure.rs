@@ -25,11 +25,12 @@ fn test_map_exposure(#[case] client: impl Client, #[case] port: i32) {
 
     let mut handle = client.create(container);
 
-    handle.run().unwrap();
+    handle.run();
 
     let response = reqwest::blocking::get(format!("http://localhost:{}", port)).unwrap();
 
     assert!(response.status().is_success());
-    assert!(handle.stop().is_ok());
+    
+    handle.stop()
 }
 

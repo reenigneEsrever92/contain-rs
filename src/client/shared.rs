@@ -1,20 +1,19 @@
 use std::{
     io::{BufRead, BufReader},
-    process::{Command, Stdio, Output},
+    process::{Command, Output, Stdio},
 };
 
 use log::debug;
 use regex::Regex;
 
 use crate::{
-    rt::ContainerInstance,
     container::{Container, HealthCheck, WaitStrategy},
     error::{Context, ErrorType, Result},
 };
 
 use super::ContainerHandle;
 
-pub fn run_and_wait_for_command_infallible(command: & mut Command) -> Result<String> {
+pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<String> {
     match run_and_wait_for_command(command) {
         Ok(output) => {
             if let Some(0) = output.status.code() {
@@ -34,7 +33,7 @@ pub fn run_and_wait_for_command_infallible(command: & mut Command) -> Result<Str
     }
 }
 
-pub fn run_and_wait_for_command(mut command: & mut Command) -> Result<Output> {
+pub fn run_and_wait_for_command(command: &mut Command) -> Result<Output> {
     debug!("Run and wait for command: {:?}", command);
 
     let child = command
@@ -48,35 +47,27 @@ pub fn run_and_wait_for_command(mut command: & mut Command) -> Result<Output> {
     debug!("Command result: {:?}", result);
 
     match result {
-        Ok(output) => {
-            Ok(output)
-        }
+        Ok(output) => Ok(output),
         Err(e) => Err(Context::new()
             .info("reason", "Io error while getting process output")
             .into_error(ErrorType::Unrecoverable)),
     }
 }
 
-pub fn build_log_command<'a>(
-    command: &'a mut Command,
-    id: &str,
-) -> &'a Command {
-    command.arg("logs").arg("-f").arg(id)
+pub fn build_log_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
+    command.arg("logs").arg("-f").arg(&container.name)
 }
 
-pub fn build_rm_command<'a>(command: &'a mut Command, id: &str) -> &'a Command {
-    command.arg("rm").arg("-f").arg(id)
+pub fn build_rm_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
+    command.arg("rm").arg("-f").arg(&container.name)
 }
 
 pub fn build_ps_command<'a>(command: &'a mut Command) -> &'a Command {
     command.arg("ps").arg("--format").arg("json")
 }
 
-pub fn build_stop_command<'a>(
-    command: &'a mut Command,
-    name: &str,
-) -> &'a Command {
-    command.arg("stop").arg(name)
+pub fn build_stop_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
+    command.arg("stop").arg(&container.name)
 }
 
 pub fn build_run_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
@@ -94,8 +85,8 @@ fn add_name_arg<'a>(command: &'a mut Command, container: &Container) -> &'a Comm
     command.arg("--name").arg(&container.name)
 }
 
-pub fn build_inspect_command<'a>(command: &'a mut Command, instance: &ContainerInstance) -> &'a Command {
-    command.arg("inspect").arg(&instance.id)
+pub fn build_inspect_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
+    command.arg("inspect").arg(&container.name)
 }
 
 fn add_run_args(command: &mut Command) {
@@ -158,7 +149,6 @@ fn add_export_ports_args(command: &mut Command, container: &Container) {
 }
 
 pub fn wait_for_log(
-    instance: &ContainerInstance,
     pattern: &Regex,
     log: Box<dyn BufRead>,
 ) -> Result<()> {
@@ -205,14 +195,14 @@ pub fn do_log(mut log_command: Command) -> Result<Box<dyn BufRead>> {
 
 pub fn wait_for(
     mut command: Command,
-    instance: &ContainerInstance,
+    container: &Container,
     strategy: &WaitStrategy,
 ) -> Result<()> {
-    build_log_command(&mut command, &instance.id);
+    build_log_command(&mut command, container);
 
     match strategy {
         WaitStrategy::LogMessage { pattern } => match do_log(command) {
-            Ok(log) => wait_for_log(instance, &pattern, log),
+            Ok(log) => wait_for_log(&pattern, log),
             Err(e) => Err(Context::new()
                 .source(e)
                 .info("message", "Waiting for log output failed")

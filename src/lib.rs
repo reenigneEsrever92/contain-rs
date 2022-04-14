@@ -18,7 +18,7 @@
 //! 
 //! let mut handle = podman.create(container);
 //! 
-//! assert!(handle.run().is_ok());
+//! handle.run()
 //! 
 //! // when the handle gets out of scope the container is stopped and removed
 //! ```

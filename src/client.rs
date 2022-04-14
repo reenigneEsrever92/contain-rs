@@ -1,6 +1,6 @@
 use std::io::BufRead;
 
-use crate::{container::{Container, Port}, error::Result, rt::ContainerInstance};
+use crate::{container::Container, error::Result};
 
 pub mod docker;
 pub mod podman;
@@ -13,13 +13,13 @@ pub trait Client {
 }
 
 pub trait ContainerHandle {
-    fn run(& mut self) -> Result<()>;
-    fn stop(& mut self) -> Result<()>;
-    fn rm(& mut self) -> Result<()>;
-    fn log(& mut self) -> Result<Box<dyn BufRead>>;
+    fn run(& mut self);
+    fn stop(& mut self);
+    fn rm(& mut self);
+    fn log(& mut self) -> Option<Box<dyn BufRead>>;
     fn container(&self) -> &Container;
-    fn instance(&self) -> Option<&ContainerInstance>;
     fn is_running(&self) -> bool;
+    fn exists(&self) -> bool;
 }
 
 pub trait LogStream {
