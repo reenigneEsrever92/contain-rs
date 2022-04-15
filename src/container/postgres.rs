@@ -4,9 +4,7 @@
 /// ## Usage:
 ///
 ///
-use std::{str::FromStr, time::Duration};
-
-use regex::Regex;
+use std::{time::Duration};
 
 use crate::container::{Container, WaitStrategy};
 

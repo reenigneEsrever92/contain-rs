@@ -28,6 +28,12 @@
 //! 
 //! Focus lies on the podman client though, which you can find [`here`](client::Podman).
 //! 
+//! # Images
+//! 
+//! Strictly speaking the types of this crate wouldn't exactly define an image as a thing that can be run.
+//! 
+//! Rather it would schedule containers. Which you can find a description of containers [`here`](container).
+//! 
 
 pub mod container;
 pub mod client;

@@ -133,7 +133,3 @@ impl<T: Client> Drop for ContainerHandle<T> {
         self.rm();
     }
 }
-
-pub trait LogStream {
-    fn stream(&mut self) -> Result<Box<dyn BufRead>>;
-}
