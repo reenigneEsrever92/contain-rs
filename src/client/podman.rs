@@ -10,9 +10,9 @@ use super::{
     shared::{
         build_inspect_command, build_log_command, build_ps_command, build_rm_command,
         build_run_command, build_stop_command, do_log, run_and_wait_for_command,
-        run_and_wait_for_command_infallible,
+        run_and_wait_for_command_infallible, wait_for,
     },
-    Client, ContainerHandle,
+    Client, ContainerHandle, Log,
 };
 
 #[allow(dead_code)]
@@ -87,12 +87,16 @@ impl Client for Podman {
         Ok(())
     }
 
-    fn log(&self, container: &Container) -> Result<Box<dyn BufRead>> {
-        let mut command = self.build_command();
+    fn log(&self, container: &Container) -> Result<Option<Log>> {
+        if self.runs(container)? {
+            let mut command = self.build_command();
 
-        build_log_command(&mut command, container);
+            build_log_command(&mut command, container);
 
-        do_log(command)
+            Ok(Some(do_log(&mut command)?))
+        } else {
+            Ok(None)
+        }
     }
 
     fn inspect(&self, container: &Container) -> Result<Option<ContainerInfo>> {
@@ -159,5 +163,11 @@ impl Client for Podman {
                 .info("json", &output)
                 .into_error(ErrorType::JsonError)),
         }
+    }
+
+    fn wait(&self, container: &Container) -> Result<()> {
+        let mut command = self.build_command();
+
+        wait_for(command, container)
     }
 }

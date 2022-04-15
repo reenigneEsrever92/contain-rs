@@ -1,6 +1,8 @@
 use std::{
     io::{BufRead, BufReader},
     process::{Command, Output, Stdio},
+    thread,
+    time::Duration,
 };
 
 use log::debug;
@@ -11,7 +13,7 @@ use crate::{
     error::{Context, ErrorType, Result},
 };
 
-use super::Handle;
+use super::{Handle, Log};
 
 pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<String> {
     match run_and_wait_for_command(command) {
@@ -150,26 +152,71 @@ fn add_export_ports_args(command: &mut Command, container: &Container) {
     })
 }
 
-pub fn wait_for_log(
-    pattern: &Regex,
-    log: Box<dyn BufRead>,
-) -> Result<()> {
-    for line in log.lines() {
-        match line {
-            Ok(line) => {
-                debug!("Searching for LogMessage pattern: {pattern}, in: {line}");
-                if pattern.is_match(&line) {
-                    debug!("Found pattern in line: {line}");
-                    return Ok(());
+pub fn do_log(log_command: &mut Command) -> Result<Log> {
+    // when containers are just in the making accessing logs to early can result in errors
+    // TODO - fm maybe we can somehow get rid of it, but I wouldn't know how
+    thread::sleep(Duration::from_millis(2000)); 
+    match log_command
+        .stdout(Stdio::piped())
+        // .stderr(Stdio::piped())
+        .spawn()
+    {
+        Ok(mut child) => Ok(Log { child }),
+        Err(e) => Err(Context::new()
+            .source(e)
+            .info("message", "Could not spawn log command")
+            .into_error(ErrorType::LogError)),
+    }
+}
+
+pub fn wait_for(mut command: Command, container: &Container) -> Result<()> {
+    match &container.wait_strategy {
+        Some(strategy) => match strategy {
+            WaitStrategy::LogMessage { pattern } => {
+                build_log_command(&mut command, container);
+
+                match do_log(&mut command) {
+                    Ok(log) => {
+                        let result = wait_for_log(&pattern, log);
+
+                        result
+                    },
+                    Err(e) => Err(Context::new()
+                        .source(e)
+                        .info("message", "Waiting for log output failed")
+                        .into_error(ErrorType::LogError)),
                 }
             }
-            Err(e) => {
-                return Err(Context::new()
-                    .source(e)
-                    .info("reason", "Could not read from log")
-                    .into_error(ErrorType::LogError))
+            WaitStrategy::HealthCheck { check: _ } => todo!(),
+        },
+        None => Ok(()),
+    }
+}
+
+pub fn wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
+    match log.stream() {
+        Some(read) => {
+            for line in read.lines() {
+                match line {
+                    Ok(line) => {
+                        debug!("Searching for LogMessage pattern: {pattern}, in: {line}");
+                        if pattern.is_match(&line) {
+                            debug!("Found pattern in line: {line}");
+                            // wait a little after reading the log message just to be sure the container really is ready
+                            thread::sleep(Duration::from_millis(2000));
+                            return Ok(());
+                        }
+                    }
+                    Err(e) => {
+                        return Err(Context::new()
+                            .source(e)
+                            .info("reason", "Could not read from log")
+                            .into_error(ErrorType::LogError))
+                    }
+                }
             }
         }
+        None => {}
     }
 
     Err(Context::new()
@@ -178,40 +225,6 @@ pub fn wait_for_log(
             "Log has been closed before message could be found",
         )
         .into_error(ErrorType::WaitError))
-}
-
-pub fn do_log(mut log_command: Command) -> Result<Box<dyn BufRead>> {
-    match log_command.stdout(Stdio::piped()).spawn() {
-        Ok(mut child) => match child.stdout.take() {
-            Some(stdout) => Ok(Box::new(BufReader::new(stdout))),
-            None => Err(Context::new()
-                .info("message", "Stoud could not be opened")
-                .into_error(ErrorType::LogError)),
-        },
-        Err(e) => Err(Context::new()
-            .source(e)
-            .info("message", "Could not spawn log command")
-            .into_error(ErrorType::LogError)),
-    }
-}
-
-pub fn wait_for(
-    mut command: Command,
-    container: &Container,
-    strategy: &WaitStrategy,
-) -> Result<()> {
-    build_log_command(&mut command, container);
-
-    match strategy {
-        WaitStrategy::LogMessage { pattern } => match do_log(command) {
-            Ok(log) => wait_for_log(&pattern, log),
-            Err(e) => Err(Context::new()
-                .source(e)
-                .info("message", "Waiting for log output failed")
-                .into_error(ErrorType::LogError)),
-        },
-        WaitStrategy::HealthCheck { check: _ } => todo!(),
-    }
 }
 
 #[allow(dead_code)]

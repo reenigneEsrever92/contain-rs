@@ -13,5 +13,6 @@ A tool to use docker / podman / oci containers with rust
 - [x] extract comman parts into shared module
 - [ ] add docker implementation
 - [ ] implement healthcheck wait strategy
+- [ ] create image macro, to create new images from structs easily
 - [ ] add a few images
 
