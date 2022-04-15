@@ -7,7 +7,7 @@ description = "Run containers with podman (or docker)"
 repository = "https://github.com/reenigneEsrever92/contain-rs"
 documentation = "https://docs.rs/contain-rs"
 readme = "README.md"
-categories = ["containers", "docker", "podman", "test"]
+categories = ["development-tools::testing"]
 
 [dependencies]
 rand = "0.8"
