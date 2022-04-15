@@ -177,7 +177,7 @@ pub fn do_log(log_command: &mut Command) -> Result<Log> {
     // TODO - fm maybe we can somehow get rid of it, but I wouldn't know how
     match log_command
         .stdout(Stdio::piped())
-        // .stderr(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
     {
         Ok(mut child) => Ok(Log { child }),
@@ -193,9 +193,13 @@ pub fn wait_for(mut command: Command, container: &Container) -> Result<()> {
         Some(strategy) => match strategy {
             WaitStrategy::LogMessage { pattern } => {
                 build_log_command(&mut command, container);
+                
+                thread::sleep(Duration::from_secs(1));
 
                 match do_log(&mut command) {
-                    Ok(log) => wait_for_log(&pattern, log),
+                    Ok(log) => {
+                        wait_for_log(&pattern, log)
+                    },
                     Err(e) => Err(Context::new()
                         .source(e)
                         .info("message", "Waiting for log output failed")
