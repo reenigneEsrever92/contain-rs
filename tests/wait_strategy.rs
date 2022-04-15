@@ -23,7 +23,7 @@ fn test_wait_for_log(#[case] client: impl Client) {
 
     client.run(&container).unwrap();
 
-    std::thread::sleep(Duration::from_secs(1));
+    std::thread::sleep(Duration::from_secs(2));
 
     assert!(client.wait(&container).is_ok());
 }
