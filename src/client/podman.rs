@@ -1,4 +1,4 @@
-use std::{io::BufRead, process::Command};
+use std::process::Command;
 
 use crate::{
     container::*,
@@ -25,12 +25,11 @@ use super::{
 /// };
 ///
 /// let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
-/// .health_check(HealthCheck::new("curl http://localhost || exit 1"))
-/// .wait_for(WaitStrategy::HealthCheck);
+///     .health_check(HealthCheck::new("curl http://localhost || exit 1"))
+///     .wait_for(WaitStrategy::HealthCheck);
 ///
 /// client.run(&container).unwrap();
-///
-/// client.wait(&container).unwrap();
+/// 
 /// assert!(client.wait(&container).is_ok());
 /// ```
 ///
@@ -168,7 +167,7 @@ impl Client for Podman {
     }
 
     fn wait(&self, container: &Container) -> Result<()> {
-        let mut command = self.build_command();
+        let command = self.build_command();
 
         wait_for(command, container)
     }

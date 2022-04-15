@@ -38,6 +38,5 @@ fn test_wait_for_health_check(#[case] client: impl Client) {
 
     client.run(&container).unwrap();
 
-    client.wait(&container).unwrap();
     assert!(client.wait(&container).is_ok());
 }

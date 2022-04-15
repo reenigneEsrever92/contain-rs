@@ -1,5 +1,5 @@
 use std::{
-    io::{BufRead, BufReader},
+    io::{BufRead},
     process::{Command, Output, Stdio},
     thread,
     time::Duration,
@@ -9,11 +9,11 @@ use log::debug;
 use regex::Regex;
 
 use crate::{
-    container::{Container, HealthCheck, WaitStrategy},
+    container::{Container, WaitStrategy},
     error::{Context, ErrorType, Result},
 };
 
-use super::{Handle, Log};
+use super::{Log};
 
 pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<String> {
     match run_and_wait_for_command(command) {
@@ -176,7 +176,7 @@ pub fn do_log(log_command: &mut Command) -> Result<Log> {
         .stderr(Stdio::piped())
         .spawn()
     {
-        Ok(mut child) => Ok(Log { child }),
+        Ok(child) => Ok(Log { child }),
         Err(e) => Err(Context::new()
             .source(e)
             .info("message", "Could not spawn log command")
