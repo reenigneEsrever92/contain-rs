@@ -15,9 +15,15 @@ fn podman() -> Podman {
 #[case::podman_port_exposure(podman())]
 // #[case::docker_port_exposure(docker(), "8082")]
 fn test_wait_for_log(#[case] client: impl Client) {
-    let container = Postgres::default().container();
+    let container = Container::from_image(Image::from_name("docker.io/library/nginx")).wait_for(
+        WaitStrategy::LogMessage {
+            pattern: regex::Regex::from_str("ready for start up").unwrap(),
+        },
+    );
 
     client.run(&container).unwrap();
+
+    std::thread::sleep(Duration::from_secs(1));
 
     assert!(client.wait(&container).is_ok());
 }

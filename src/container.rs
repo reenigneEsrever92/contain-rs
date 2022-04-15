@@ -152,6 +152,7 @@ pub struct Container {
     pub env_vars: Vec<EnvVar>,
     pub health_check: Option<HealthCheck>,
     pub wait_strategy: Option<WaitStrategy>,
+    pub additional_wait_period: Duration,
 }
 
 impl Container {
@@ -172,6 +173,7 @@ impl Container {
             env_vars: Vec::new(),
             health_check: None,
             wait_strategy: None,
+            additional_wait_period: Duration::from_secs(0),
         }
     }
 
@@ -196,6 +198,11 @@ impl Container {
 
     pub fn wait_for(mut self, strategy: WaitStrategy) -> Self {
         self.wait_strategy = Some(strategy);
+        self
+    }
+
+    pub fn additional_wait_period(mut self, period: Duration) -> Self {
+        self.additional_wait_period = period;
         self
     }
 

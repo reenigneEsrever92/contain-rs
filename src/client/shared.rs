@@ -130,31 +130,27 @@ fn add_env_var_args(command: &mut Command, container: &Container) {
 fn add_health_check_args(command: &mut Command, container: &Container) {
     if let Some(check) = &container.health_check {
         command
-            .arg("--healthcheck-command")
+            .arg("--health-cmd")
             .arg(format!("CMD-SHELL {}", check.command));
 
         if let Some(start_period) = check.start_period {
             command
-                .arg("--healthcheck-start-period")
-                .arg(format!("{}s", start_period.as_secs()));
+                .arg(format!("--health-start-period={}s", start_period.as_secs()));
         }
 
         if let Some(interval) = check.interval {
             command
-                .arg("--healthcheck-interval")
-                .arg(format!("{}s", interval.as_secs()));
+                .arg(format!("--health-interval={}s", interval.as_secs()));
         }
 
         if let Some(timeout) = check.timeout {
             command
-                .arg("--healthcheck-start-period")
-                .arg(format!("{}s", timeout.as_secs()));
+                .arg(format!("--health-timeout={}s", timeout.as_secs()));
         }
 
         if let Some(retries) = check.retries {
             command
-                .arg("--healthcheck-retries")
-                .arg(format!("{}", retries));
+                .arg(format!("--health-retries={}", retries));
         }
     }
 }
@@ -189,19 +185,12 @@ pub fn do_log(log_command: &mut Command) -> Result<Log> {
 }
 
 pub fn wait_for(mut command: Command, container: &Container) -> Result<()> {
-    match &container.wait_strategy {
+    let result = match &container.wait_strategy {
         Some(strategy) => match strategy {
             WaitStrategy::LogMessage { pattern } => {
                 build_log_command(&mut command, container);
-
-                thread::sleep(Duration::from_secs(1));
-
                 match do_log(&mut command) {
-                    Ok(log) => {
-                        let result = wait_for_log(&pattern, log);
-                        thread::sleep(Duration::from_secs(2));
-                        result
-                    },
+                    Ok(log) => wait_for_log(&pattern, log),
                     Err(e) => Err(Context::new()
                         .source(e)
                         .info("message", "Waiting for log output failed")
@@ -211,7 +200,11 @@ pub fn wait_for(mut command: Command, container: &Container) -> Result<()> {
             WaitStrategy::HealthCheck => wait_for_health_check(&mut command, container),
         },
         None => Ok(()),
-    }
+    };
+
+    thread::sleep(container.additional_wait_period);
+
+    result
 }
 
 pub fn wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
@@ -250,13 +243,18 @@ pub fn wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
 fn wait_for_health_check(command: &mut Command, container: &Container) -> Result<()> {
     add_health_check_run_args(command, container);
 
-    let output = run_and_wait_for_command(command)?;
-
     loop {
-        thread::sleep(Duration::from_millis(200));
+        debug!("checking health for {}", &container.name);
+        let output = run_and_wait_for_command(command)?;
         match output.status.code() {
-            Some(0) => return Ok(()),
-            Some(1) => {} // not healthy yet
+            Some(0) => {
+                debug!("healthcheck succeeded");
+                return Ok(());
+            }
+            Some(1) => {
+                debug!("healthcheck failed");
+                thread::sleep(Duration::from_millis(200));
+            } // not healthy yet
             Some(code) => {
                 return Err(Context::new()
                     .info("message", "running healthcheck failed")

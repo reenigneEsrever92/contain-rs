@@ -4,13 +4,13 @@
 /// ## Usage:
 ///
 ///
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 
 use regex::Regex;
 
 use crate::container::{Container, WaitStrategy};
 
-use super::Image;
+use super::{HealthCheck, Image};
 
 pub struct Postgres {
     db: Option<String>,
@@ -46,9 +46,11 @@ impl Postgres {
 
     pub fn container(self) -> Container {
         let mut container = Container::from_image(Image::from_name(Postgres::IMAGE))
-            .wait_for(WaitStrategy::LogMessage {
-                pattern: Regex::from_str("database system is ready to accept connections").unwrap(),
-            })
+            .health_check(
+                HealthCheck::new("pg_isready")
+            )
+            .additional_wait_period(Duration::from_secs(2))
+            .wait_for(WaitStrategy::HealthCheck)
             .env_var(("POSTGRES_PASSWORD", self.password));
 
         if let Some(db) = self.db {
@@ -92,12 +94,16 @@ mod test {
         let connection =
             PgConnection::establish("postgres://pg-user:password@localhost:5432/test-db").unwrap();
 
-        assert!(connection.execute("CREATE TABLE posts (
+        assert!(connection
+            .execute(
+                "CREATE TABLE posts (
             id SERIAL PRIMARY KEY,
             title VARCHAR NOT NULL,
             body TEXT NOT NULL,
             published BOOLEAN NOT NULL DEFAULT 'f'
-          )").is_ok());
+          )"
+            )
+            .is_ok());
 
         handle.stop();
     }
