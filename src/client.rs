@@ -1,11 +1,16 @@
+//!
+//! This module contains the traits that represent the bare functiionality of a client.
+//! 
+//! See [Podman] for usage of the podman client implementation.
+//! 
+
 use std::{
     io::{BufRead, BufReader},
-    marker::PhantomData,
-    process::{Child, Command},
+    process::Child,
 };
 
 use crate::{
-    container::{Container, WaitStrategy},
+    container::{Container},
     error::Result,
     rt::{ContainerInfo, ProcessState},
 };
@@ -14,9 +19,21 @@ pub mod docker;
 pub mod podman;
 pub mod shared;
 
+pub use self::podman::Podman;
+
+///
+/// The client Trait represents a way to access a client. 
+/// 
+/// It's implemented by the [Podman] struct for example. And will be for docker as well.
+/// If you do that for any specific Type you get [`handles`](Handle) for free.
+/// 
+/// 
 pub trait Client: Clone {
     type ClientType: Client;
 
+    ///
+    /// 
+    /// 
     fn create(&self, container: Container) -> ContainerHandle<Self::ClientType>;
     fn run(&self, container: &Container) -> Result<()>;
     fn stop(&self, container: &Container) -> Result<()>;
@@ -29,11 +46,17 @@ pub trait Client: Clone {
     fn wait(&self, container: &Container) -> Result<()>;
 }
 
+///
+/// A handle is a way to interact with a container.
+/// 
+/// When you create a container using a [Client] it will return one of these.
+/// The handle automatically stops and removes the container, when it goes out of scope.
+/// 
 pub trait Handle {
-    fn run(&mut self);
-    fn stop(&mut self);
-    fn rm(&mut self);
-    fn log(&mut self) -> Option<Log>;
+    fn run(&self);
+    fn stop(&self);
+    fn rm(&self);
+    fn log(&self) -> Option<Log>;
     fn container(&self) -> &Container;
     fn is_running(&self) -> bool;
     fn exists(&self) -> bool;
@@ -64,26 +87,26 @@ pub struct ContainerHandle<T: Client> {
 }
 
 impl<T: Client> Handle for ContainerHandle<T> {
-    fn run(&mut self) {
+    fn run(&self) {
         if !self.is_running() {
             self.client.run(&self.container).unwrap();
             self.client.wait(&self.container).unwrap();
         }
     }
 
-    fn stop(&mut self) {
+    fn stop(&self) {
         if self.is_running() {
             self.client.stop(&self.container).unwrap()
         }
     }
 
-    fn rm(&mut self) {
+    fn rm(&self) {
         if self.exists() {
             self.client.rm(&self.container).unwrap()
         }
     }
 
-    fn log(&mut self) -> Option<Log> {
+    fn log(&self) -> Option<Log> {
         if self.is_running() {
             self.client.log(&self.container).unwrap()
         } else {

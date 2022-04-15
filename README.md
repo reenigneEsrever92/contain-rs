@@ -1,7 +1,7 @@
 ![example workflow](https://github.com/reenigneEsrever92/contain-rs/actions/workflows/rust.yml/badge.svg)
 
 # contain-rs
-A tool to use podman containers with rust
+A tool to use podman containers with rust.
 
 Docker is planned, as well. I just happened to start with podman since I tend to like a lot.
 

@@ -15,6 +15,25 @@ use super::{
     Client, ContainerHandle, Log,
 };
 
+///
+/// The Podman struct is used for acessing the podman binary. 
+///
+/// ```
+/// use contain_rs::{
+///     client::{podman::Podman, Client, Handle},
+///     container::{postgres::Postgres, Container, Image},
+/// };
+///
+/// let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
+/// .health_check(HealthCheck::new("curl http://localhost || exit 1"))
+/// .wait_for(WaitStrategy::HealthCheck);
+///
+/// client.run(&container).unwrap();
+///
+/// client.wait(&container).unwrap();
+/// assert!(client.wait(&container).is_ok());
+/// ```
+///
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct Podman {
@@ -33,23 +52,6 @@ impl Podman {
     }
 }
 
-///
-/// A client implementation for podman.
-///
-/// ```
-/// use contain_rs::{
-///     client::{podman::Podman, Client, Handle},
-///     container::{postgres::Postgres, Container, Image},
-/// };
-///
-/// let podman = Podman::new();
-/// let container = Postgres::default().with_password("password").container();
-///
-/// let mut handle = podman.create(container);
-///
-/// handle.run()
-/// ```
-///
 impl Client for Podman {
     type ClientType = Self;
 

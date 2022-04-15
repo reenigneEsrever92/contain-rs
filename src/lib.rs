@@ -15,7 +15,7 @@
 //! 
 //! let container = Container::from_image(Image::from_name("docker.io/library/nginx"));
 //! 
-//! let mut handle = podman.create(container);
+//! let handle = podman.create(container);
 //! 
 //! handle.run()
 //! 
@@ -26,7 +26,7 @@
 //! 
 //! There are going to be different clients. Docker and podman are both planned for now.
 //! 
-//! Focus lies on the podman client though, which you can find [`here`](client::podman::Podman).
+//! Focus lies on the podman client though, which you can find [`here`](client::Podman).
 //! 
 
 pub mod container;
