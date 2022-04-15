@@ -3,7 +3,7 @@
 # contain-rs
 A tool to use podman containers with rust
 
-Docker is planned, as well. I just happened to start with podman since I tend to like it better than docker.
+Docker is planned, as well. I just happened to start with podman since I tend to like a lot.
 
 ## TODO
 
