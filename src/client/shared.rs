@@ -58,6 +58,28 @@ pub fn run_and_wait_for_command(command: &mut Command) -> Result<Output> {
     }
 }
 
+pub fn run_and_wait_for_command_2(command: &mut Command) -> Result<Output> {
+    debug!("Run and wait for command: {:?}", command);
+
+    let child = command
+        .stdout(Stdio::piped()) // TODO fm - Sometimes podman asks the user for which repo to use. This is currently ignored.
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    let result = child.wait_with_output();
+
+    debug!("Command result: {:?}", result);
+
+    match result {
+        Ok(output) => Ok(output),
+        Err(e) => Err(Context::new()
+            .info("message", "Io error while getting process output")
+            .source(e)
+            .into_error(ErrorType::Unrecoverable)),
+    }
+}
+
 pub fn build_log_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
     command.arg("logs").arg("-f").arg(&container.name)
 }
@@ -79,8 +101,8 @@ pub fn build_run_command<'a>(command: &'a mut Command, container: &Container) ->
     add_name_arg(command, container);
     add_env_var_args(command, container);
     add_export_ports_args(command, container);
+    add_health_check_args(command, container);
     add_image_arg(command, container);
-    add_wait_strategy_args(command, container);
 
     command
 }
@@ -105,37 +127,35 @@ fn add_env_var_args(command: &mut Command, container: &Container) {
     });
 }
 
-fn add_wait_strategy_args(command: &mut Command, container: &Container) {
-    match &container.wait_strategy {
-        Some(strategy) => match strategy {
-            WaitStrategy::LogMessage { pattern: _ } => {}
-            WaitStrategy::HealthCheck { check } => add_health_check_args(command, check),
-        },
-        None => {}
-    }
-}
-
-fn add_health_check_args(command: &mut Command, check: &HealthCheck) {
-    command
-        .arg("--healthcheck-command")
-        .arg(format!("CMD-SHELL {}", check.command));
-
-    if let Some(retries) = check.retries {
+fn add_health_check_args(command: &mut Command, container: &Container) {
+    if let Some(check) = &container.health_check {
         command
-            .arg("--healthcheck-retries")
-            .arg(retries.to_string());
-    }
+            .arg("--healthcheck-command")
+            .arg(format!("CMD-SHELL {}", check.command));
 
-    if let Some(duration) = check.interval {
-        command
-            .arg("--healthcheck-interval")
-            .arg(format!("{}s", duration.as_secs()));
-    }
+        if let Some(start_period) = check.start_period {
+            command
+                .arg("--healthcheck-start-period")
+                .arg(format!("{}s", start_period.as_secs()));
+        }
 
-    if let Some(duration) = check.start_period {
-        command
-            .arg("--healthcheck-start-period")
-            .arg(format!("{}s", duration.as_secs()));
+        if let Some(interval) = check.interval {
+            command
+                .arg("--healthcheck-interval")
+                .arg(format!("{}s", interval.as_secs()));
+        }
+
+        if let Some(timeout) = check.timeout {
+            command
+                .arg("--healthcheck-start-period")
+                .arg(format!("{}s", timeout.as_secs()));
+        }
+
+        if let Some(retries) = check.retries {
+            command
+                .arg("--healthcheck-retries")
+                .arg(format!("{}", retries));
+        }
     }
 }
 
@@ -155,7 +175,6 @@ fn add_export_ports_args(command: &mut Command, container: &Container) {
 pub fn do_log(log_command: &mut Command) -> Result<Log> {
     // when containers are just in the making accessing logs to early can result in errors
     // TODO - fm maybe we can somehow get rid of it, but I wouldn't know how
-    thread::sleep(Duration::from_millis(2000)); 
     match log_command
         .stdout(Stdio::piped())
         // .stderr(Stdio::piped())
@@ -176,18 +195,14 @@ pub fn wait_for(mut command: Command, container: &Container) -> Result<()> {
                 build_log_command(&mut command, container);
 
                 match do_log(&mut command) {
-                    Ok(log) => {
-                        let result = wait_for_log(&pattern, log);
-
-                        result
-                    },
+                    Ok(log) => wait_for_log(&pattern, log),
                     Err(e) => Err(Context::new()
                         .source(e)
                         .info("message", "Waiting for log output failed")
                         .into_error(ErrorType::LogError)),
                 }
             }
-            WaitStrategy::HealthCheck { check: _ } => todo!(),
+            WaitStrategy::HealthCheck => wait_for_health_check(&mut command, container),
         },
         None => Ok(()),
     }
@@ -203,7 +218,6 @@ pub fn wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
                         if pattern.is_match(&line) {
                             debug!("Found pattern in line: {line}");
                             // wait a little after reading the log message just to be sure the container really is ready
-                            thread::sleep(Duration::from_millis(2000));
                             return Ok(());
                         }
                     }
@@ -227,16 +241,33 @@ pub fn wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
         .into_error(ErrorType::WaitError))
 }
 
-#[allow(dead_code)]
-fn wait_for_health_check<T: Handle>(_handle: &T) -> Result<()> {
-    todo!()
-    // thread::sleep(Duration::from_secs(10));
+fn wait_for_health_check(command: &mut Command, container: &Container) -> Result<()> {
+    add_health_check_run_args(command, container);
 
-    // match run_and_wait_for_command(self.build_health_check_command(&handle.instance)) {
-    //     Ok(_) => Ok(()),
-    //     Err(e) => Err(Context::new()
-    //         .info("reason", "Healthcheck failed")
-    //         .source(e)
-    //         .into_error(ErrorType::WaitError)),
-    // }
+    let output = run_and_wait_for_command(command)?;
+
+    loop {
+        thread::sleep(Duration::from_millis(200));
+        match output.status.code() {
+            Some(0) => return Ok(()),
+            Some(1) => {} // not healthy yet
+            Some(code) => {
+                return Err(Context::new()
+                    .info("message", "running healthcheck failed")
+                    .info("command", command)
+                    .info("exit-code", &code)
+                    .info("stderr", &String::from_utf8(output.stderr))
+                    .into_error(ErrorType::CommandError))
+            }
+            _ => {
+                return Err(Context::new()
+                    .info("message", "unknown error")
+                    .into_error(ErrorType::Unrecoverable))
+            }
+        }
+    }
+}
+
+fn add_health_check_run_args(command: &mut Command, container: &Container) {
+    command.arg("healthcheck").arg("run").arg(&container.name);
 }

@@ -15,9 +15,9 @@ pub struct HealthCheck {
 }
 
 impl HealthCheck {
-    pub fn new(command: String) -> Self {
+    pub fn new(command: &str) -> Self {
         Self {
-            command,
+            command: command.to_string(),
             retries: None,
             interval: None,
             start_period: None,
@@ -49,7 +49,7 @@ impl HealthCheck {
 #[derive(Clone)]
 pub enum WaitStrategy {
     LogMessage { pattern: Regex },
-    HealthCheck { check: HealthCheck },
+    HealthCheck,
 }
 
 #[derive(Clone)]
@@ -150,6 +150,7 @@ pub struct Container {
     pub network: Option<Network>,
     pub port_mappings: Vec<PortMapping>,
     pub env_vars: Vec<EnvVar>,
+    pub health_check: Option<HealthCheck>,
     pub wait_strategy: Option<WaitStrategy>,
 }
 
@@ -169,6 +170,7 @@ impl Container {
             network: None,
             port_mappings: Vec::new(),
             env_vars: Vec::new(),
+            health_check: None,
             wait_strategy: None,
         }
     }
@@ -194,6 +196,11 @@ impl Container {
 
     pub fn wait_for(mut self, strategy: WaitStrategy) -> Self {
         self.wait_strategy = Some(strategy);
+        self
+    }
+
+    pub fn health_check(mut self, health_check: HealthCheck) -> Self {
+        self.health_check = Some(health_check);
         self
     }
 }

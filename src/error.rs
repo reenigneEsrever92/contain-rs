@@ -7,7 +7,6 @@ pub type Result<T> = std::result::Result<T, ContainersError>;
 #[derive(Debug)]
 pub enum ErrorType {
     Unrecoverable,
-    ContainerStateError,
     CommandError,
     JsonError,
     LogError,
@@ -89,7 +88,6 @@ impl Display for ErrorType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ErrorType::Unrecoverable => write!(f, "Unrecoverable Error"),
-            ErrorType::ContainerStateError => write!(f, "Container Is Not Running"),
             ErrorType::CommandError => write!(f, "Command Error"),
             ErrorType::LogError => write!(f, "Log Error"),
             ErrorType::WaitError => write!(f, "Wait Error"),
