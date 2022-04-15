@@ -193,12 +193,14 @@ pub fn wait_for(mut command: Command, container: &Container) -> Result<()> {
         Some(strategy) => match strategy {
             WaitStrategy::LogMessage { pattern } => {
                 build_log_command(&mut command, container);
-                
+
                 thread::sleep(Duration::from_secs(1));
 
                 match do_log(&mut command) {
                     Ok(log) => {
-                        wait_for_log(&pattern, log)
+                        let result = wait_for_log(&pattern, log);
+                        thread::sleep(Duration::from_secs(2));
+                        result
                     },
                     Err(e) => Err(Context::new()
                         .source(e)
