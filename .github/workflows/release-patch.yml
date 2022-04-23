@@ -6,6 +6,10 @@ on:
         CRATES_IO_TOKEN:
           required: true
 
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
   release:
 
     runs_on: ubuntu:latest
