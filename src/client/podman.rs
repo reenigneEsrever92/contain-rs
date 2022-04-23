@@ -16,7 +16,7 @@ use super::{
 };
 
 ///
-/// The Podman struct is used for acessing the podman binary. 
+/// The Podman struct is used for acessing the podman cli. 
 ///
 /// ```
 /// use contain_rs::{

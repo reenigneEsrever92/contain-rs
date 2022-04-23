@@ -85,7 +85,7 @@ mod test {
             .container()
             .map_port(5432, 5432);
 
-        let mut handle = client.create(container);
+        let handle = client.create(container);
 
         handle.run();
 

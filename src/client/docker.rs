@@ -1,137 +1,114 @@
-// use std::{io::BufRead, process::Command};
+use std::process::Command;
 
-// use crate::{
-//     container::{Container, WaitStrategy},
-//     error::{Context, ErrorType, Result}, rt::ContainerInstance,
-// };
+use crate::{container::Container, error::Result, rt::ContainerInfo};
 
-// use super::{
-//     shared::{build_run_command, run_and_wait_for_command, build_stop_command, build_rm_command},
-//     Client, ContainerHandle,
-// };
+use super::{
+    shared::{build_run_command, run_and_wait_for_command, build_stop_command, build_rm_command, build_log_command, do_log},
+    Client, ContainerHandle, Log,
+};
 
-// #[derive(Debug, Clone)]
-// pub struct Docker {
-//     host: Option<String>,
-// }
+///
+/// The Docker struct is used for acessing the docker cli.
+///
+/// ```
+/// use contain_rs::{
+///     client::{docker::Docker, Client, Handle},
+///     container::{postgres::Postgres, Container, Image, HealthCheck, WaitStrategy},
+/// };
+///
+/// let client = Docker::new();
+///
+/// let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
+///     .health_check(HealthCheck::new("curl http://localhost || exit 1"))
+///     .wait_for(WaitStrategy::HealthCheck);
+///
+/// client.run(&container).unwrap();
+///
+/// assert!(client.wait(&container).is_ok());
+/// ```
+///
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct Docker {
+    host: Option<String>,
+}
 
-// impl Docker {
-//     const BINARY: &'static str = "docker";
+impl Docker {
+    pub fn new() -> Self {
+        Self { host: None }
+    }
 
-//     pub fn new() -> Self {
-//         Self { host: None }
-//     }
+    fn build_command(&self) -> Command {
+        Command::new("docker")
+    }
+}
 
-//     fn build_command(&self) -> Command {
-//         Command::new(Self::BINARY)
-//     }
-// }
+impl Client for Docker {
+    type ClientType = Docker;
 
-// impl Client for Docker {
-//     type ContainerHandle = DockerHandle;
+    fn create(&self, container: Container) -> super::ContainerHandle<Self::ClientType> {
+        ContainerHandle {
+            client: self.clone(),
+            container,
+        }
+    }
 
-//     fn create(&self, container: Container) -> Self::ContainerHandle {
-//         DockerHandle {
-//             instance: None,
-//             container,
-//             docker: self.clone(),
-//         }
-//     }
-// }
+    fn run(&self, container: &Container) -> Result<()> {
+        let mut cmd = self.build_command();
 
-// pub struct DockerHandle {
-//     instance: Option<ContainerInstance>,
-//     container: Container,
-//     docker: Docker,
-// }
+        build_run_command(&mut cmd, container);
+        run_and_wait_for_command(&mut cmd)?;
 
-// impl DockerHandle {
-//     fn do_if_running<R, T: FnOnce(& mut DockerHandle) -> Result<R>>(
-//         & mut self,
-//         func: T,
-//     ) -> Result<R> {
-//         match self.instance() {
-//             Some(instance) => func(self),
-//             None => Err(Context::new()
-//                 .info("message", "Container is not running")
-//                 .into_error(ErrorType::ContainerStateError)),
-//         }
-//     }
+        Ok(())
+    }
 
-//     fn do_if_not_running<R, T: FnOnce(&mut DockerHandle) -> Result<R>>(
-//         &mut self,
-//         func: T,
-//     ) -> Result<R> {
-//         match self.instance() {
-//             Some(instance) => Err(Context::new()
-//                 .info("message", "Container is already running")
-//                 .info("container", &instance.id)
-//                 .into_error(ErrorType::ContainerStateError)),
-//             None => func(self),
-//         }
-//     }
-// }
+    fn stop(&self, container: &Container) -> Result<()> {
+        let mut cmd = self.build_command();
 
-// impl ContainerHandle for DockerHandle {
-//     fn run(&mut self) -> Result<()> {
-//         self.do_if_not_running(|handle| {
-//             let mut command = handle.docker.build_command();
+        build_stop_command(&mut cmd, container);
+        run_and_wait_for_command(&mut cmd)?;
 
-//             build_run_command(&mut command, handle.container());
+        Ok(())
+    }
 
-//             let id = run_and_wait_for_command(command)?;
+    fn rm(&self, container: &Container) -> Result<()> {
+        let mut cmd = self.build_command();
 
-//             handle.instance = Some(ContainerInstance::new(id.trim().to_string()));
+        build_rm_command(&mut cmd, container);
+        run_and_wait_for_command(&mut cmd)?;
 
-//             Ok(())
-//         })
-//     }
+        Ok(())
+    }
 
-//     fn stop(&mut self) -> Result<()> {
-//         self.do_if_running(|handle| {
-//             let mut command = handle.docker.build_command();
+    fn log(&self, container: &Container) -> Result<Option<Log>> {
+        if self.runs(container)? {
+            let mut cmd = self.build_command();
 
-//             build_stop_command(& mut command, handle.instance().unwrap());
-//             run_and_wait_for_command(command)?;
+            build_log_command(&mut cmd, container);
 
-//             handle.instance = None;
+            Ok(Some(do_log(&mut cmd)?))
+        } else {
+            Ok(None)
+        }
+    }
 
-//             Ok(())
-//         })
-//     }
+    fn inspect(&self, container: &Container) -> Result<Option<ContainerInfo>> {
+        todo!()
+    }
 
-//     fn rm(&mut self) -> Result<()> {
-//         self.do_if_running(|handle| {
-//             let mut command = handle.docker.build_command();
+    fn exists(&self, container: &Container) -> Result<bool> {
+        todo!()
+    }
 
-//             build_rm_command(& mut command, handle.instance().unwrap());
-//             run_and_wait_for_command(command)?;
+    fn runs(&self, container: &Container) -> Result<bool> {
+        todo!()
+    }
 
-//             Ok(())
-//         })
-//     }
+    fn ps(&self) -> Result<Vec<crate::rt::ProcessState>> {
+        todo!()
+    }
 
-//     fn log(& mut self) -> Result<Box<dyn std::io::BufRead>> {
-//         todo!()
-//     }
-
-//     fn container(&self) -> &Container {
-//         &self.container
-//     }
-
-//     fn instance(&self) -> Option<&ContainerInstance> {
-//         self.instance.as_ref()
-//     }
-
-//     fn is_running(&self) -> bool {
-//         self.instance().is_some()
-//     }
-// }
-
-// impl Drop for DockerHandle {
-//     fn drop(&mut self) {
-//         if self.is_running() {
-//             self.rm().unwrap();
-//         }
-//     }
-// }
+    fn wait(&self, container: &Container) -> Result<()> {
+        todo!()
+    }
+}

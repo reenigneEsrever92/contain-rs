@@ -1,10 +1,8 @@
 use contain_rs::{
     client::{podman::Podman, Client, Handle},
-    container::{Container, Image, WaitStrategy, HealthCheck},
+    container::{Container, HealthCheck, Image, WaitStrategy},
 };
 use rstest::*;
-
-use std::str::FromStr;
 
 #[fixture]
 fn podman() -> Podman {
@@ -33,5 +31,5 @@ fn test_map_exposure(#[case] client: impl Client, #[case] port: i32) {
 
     assert!(response.status().is_success());
 
-    handle.stop()
+    handle.stop();
 }

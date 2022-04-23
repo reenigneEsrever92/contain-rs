@@ -1,5 +1,5 @@
 use std::{
-    io::{BufRead},
+    io::BufRead,
     process::{Command, Output, Stdio},
     thread,
     time::Duration,
@@ -13,7 +13,7 @@ use crate::{
     error::{Context, ErrorType, Result},
 };
 
-use super::{Log};
+use super::Log;
 
 pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<String> {
     match run_and_wait_for_command(command) {
@@ -134,23 +134,19 @@ fn add_health_check_args(command: &mut Command, container: &Container) {
             .arg(format!("CMD-SHELL {}", check.command));
 
         if let Some(start_period) = check.start_period {
-            command
-                .arg(format!("--health-start-period={}s", start_period.as_secs()));
+            command.arg(format!("--health-start-period={}s", start_period.as_secs()));
         }
 
         if let Some(interval) = check.interval {
-            command
-                .arg(format!("--health-interval={}s", interval.as_secs()));
+            command.arg(format!("--health-interval={}s", interval.as_secs()));
         }
 
         if let Some(timeout) = check.timeout {
-            command
-                .arg(format!("--health-timeout={}s", timeout.as_secs()));
+            command.arg(format!("--health-timeout={}s", timeout.as_secs()));
         }
 
         if let Some(retries) = check.retries {
-            command
-                .arg(format!("--health-retries={}", retries));
+            command.arg(format!("--health-retries={}", retries));
         }
     }
 }

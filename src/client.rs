@@ -15,11 +15,12 @@ use crate::{
     rt::{ContainerInfo, ProcessState},
 };
 
-pub mod docker;
 pub mod podman;
+pub mod docker;
 pub mod shared;
 
 pub use self::podman::Podman;
+pub use self::docker::Docker;
 
 ///
 /// The client Trait represents a way to access a client. 
