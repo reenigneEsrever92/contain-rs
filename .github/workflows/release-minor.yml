@@ -16,6 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - uses: fregante/setup-git-user@v1
     - name: Prepare
       run: |
         cargo install cargo-bump
@@ -34,5 +35,6 @@ jobs:
       run: |
         cargo bump minor
         export VERSION=$(cargo get version)
+        git add .
         git commit -m "incremented patch level to ${VERSION}"
         git push
