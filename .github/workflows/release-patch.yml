@@ -2,9 +2,9 @@ name: Release Patch
 
 on: 
   workflow_dispatch:
-  secrets:
-      CRATES_IO_TOKEN:
-        required: true
+    secrets:
+        CRATES_IO_TOKEN:
+          required: true
 
   release:
 
