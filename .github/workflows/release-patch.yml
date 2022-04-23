@@ -1,0 +1,33 @@
+name: Release Patch
+
+on: 
+  workflow_dispatch:
+  secrets:
+      CRATES_IO_TOKEN:
+        required: true
+
+  release:
+
+    runs_on: ubuntu:latest
+
+    steps:
+    - name: Prepare
+      run: |
+        cargo install cargo-bump
+        cargo install cargo-get
+    - name: Crates.io Login
+      run: |
+        cargo login ${{ secrets.CRATES_IO_TOKEN }}
+    - name: Cargo Publish
+      run: cargo publish
+    - name: Create Tag
+      run: |
+        export VERSION=$(cargo get version)
+        git tag -a ${VERSION} -m "Release ${VERSION}"
+        git push origin ${VERSION}
+    - name: Increment Version
+      run: |
+        cargo bump patch
+        export VERSION=$(cargo get version)
+        git commit -m "incremented patch level to ${VERSION}"
+        git push
