@@ -1,9 +1,12 @@
 use std::process::Command;
 
-use crate::{container::Container, error::Result, rt::ContainerInfo};
+use crate::{container::Container, error::Result, rt::DetailedContainerInfo};
 
 use super::{
-    shared::{build_run_command, run_and_wait_for_command, build_stop_command, build_rm_command, build_log_command, do_log},
+    shared::{
+        build_rm_command, build_run_command, build_stop_command, do_log, inspect,
+        run_and_wait_for_command, wait_for,
+    },
     Client, ContainerHandle, Log,
 };
 
@@ -23,8 +26,8 @@ use super::{
 ///     .wait_for(WaitStrategy::HealthCheck);
 ///
 /// client.run(&container).unwrap();
-///
-/// assert!(client.wait(&container).is_ok());
+/// client.wait(&container).unwrap();
+/// client.rm(&container).unwrap();
 /// ```
 ///
 #[allow(dead_code)]
@@ -45,6 +48,10 @@ impl Docker {
 
 impl Client for Docker {
     type ClientType = Docker;
+
+    fn command(&self) -> Command {
+        self.build_command()
+    }
 
     fn create(&self, container: Container) -> super::ContainerHandle<Self::ClientType> {
         ContainerHandle {
@@ -82,33 +89,29 @@ impl Client for Docker {
 
     fn log(&self, container: &Container) -> Result<Option<Log>> {
         if self.runs(container)? {
-            let mut cmd = self.build_command();
-
-            build_log_command(&mut cmd, container);
-
-            Ok(Some(do_log(&mut cmd)?))
+            Ok(Some(do_log(self, container)?))
         } else {
             Ok(None)
         }
     }
 
-    fn inspect(&self, container: &Container) -> Result<Option<ContainerInfo>> {
+    fn inspect(&self, container: &Container) -> Result<Option<DetailedContainerInfo>> {
+        inspect(self, container)
+    }
+
+    fn exists(&self, _container: &Container) -> Result<bool> {
         todo!()
     }
 
-    fn exists(&self, container: &Container) -> Result<bool> {
+    fn runs(&self, _container: &Container) -> Result<bool> {
         todo!()
     }
 
-    fn runs(&self, container: &Container) -> Result<bool> {
-        todo!()
-    }
-
-    fn ps(&self) -> Result<Vec<crate::rt::ProcessState>> {
+    fn ps(&self) -> Result<Vec<crate::rt::ContainerInfo>> {
         todo!()
     }
 
     fn wait(&self, container: &Container) -> Result<()> {
-        todo!()
+        wait_for(self, container)
     }
 }

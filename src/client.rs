@@ -6,13 +6,13 @@
 
 use std::{
     io::{BufRead, BufReader},
-    process::Child,
+    process::{Child, Command},
 };
 
 use crate::{
     container::{Container},
     error::Result,
-    rt::{ContainerInfo, ProcessState},
+    rt::{DetailedContainerInfo, ContainerInfo},
 };
 
 pub mod podman;
@@ -32,18 +32,16 @@ pub use self::docker::Docker;
 pub trait Client: Clone {
     type ClientType: Client;
 
-    ///
-    /// 
-    /// 
+    fn command(&self) -> Command;
     fn create(&self, container: Container) -> ContainerHandle<Self::ClientType>;
     fn run(&self, container: &Container) -> Result<()>;
     fn stop(&self, container: &Container) -> Result<()>;
     fn rm(&self, container: &Container) -> Result<()>;
     fn log(&self, container: &Container) -> Result<Option<Log>>;
-    fn inspect(&self, container: &Container) -> Result<Option<ContainerInfo>>;
+    fn inspect(&self, container: &Container) -> Result<Option<DetailedContainerInfo>>;
     fn exists(&self, container: &Container) -> Result<bool>;
     fn runs(&self, container: &Container) -> Result<bool>;
-    fn ps(&self) -> Result<Vec<ProcessState>>;
+    fn ps(&self) -> Result<Vec<ContainerInfo>>;
     fn wait(&self, container: &Container) -> Result<()>;
 }
 

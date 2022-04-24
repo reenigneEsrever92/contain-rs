@@ -11,9 +11,10 @@ use regex::Regex;
 use crate::{
     container::{Container, WaitStrategy},
     error::{Context, ErrorType, Result},
+    rt::{ContainerInfo, ContainerStatus, DetailedContainerInfo},
 };
 
-use super::Log;
+use super::{Client, Log};
 
 pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<String> {
     match run_and_wait_for_command(command) {
@@ -164,14 +165,60 @@ fn add_export_ports_args(command: &mut Command, container: &Container) {
     })
 }
 
-pub fn do_log(log_command: &mut Command) -> Result<Log> {
-    // when containers are just in the making accessing logs to early can result in errors
-    // TODO - fm maybe we can somehow get rid of it, but I wouldn't know how
-    match log_command
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
+pub fn ps(cmd: &mut Command) -> Result<Vec<ContainerInfo>> {
+    build_ps_command(cmd);
+
+    let output = run_and_wait_for_command_infallible(cmd)?;
+
+    match serde_json::from_str(&output) {
+        Ok(vec) => Ok(vec),
+        Err(e) => Err(Context::new()
+            .source(e)
+            .info("reason", "could not parse json")
+            .info("json", &output)
+            .into_error(ErrorType::JsonError)),
+    }
+}
+
+pub fn inspect<C: Client>(
+    client: &C,
+    container: &Container,
+) -> Result<Option<DetailedContainerInfo>> {
+    let mut cmd = client.command();
+
+    build_inspect_command(&mut cmd, container);
+
+    let json = run_and_wait_for_command_infallible(&mut cmd)?;
+
+    let container_infos: Vec<DetailedContainerInfo> = serde_json::from_str(&json).map_err(|e| {
+        Context::new()
+            .source(e)
+            .info("message", "could not parse inspect output")
+            .info("json", &json)
+            .into_error(ErrorType::JsonError)
+    })?;
+
+    match container_infos.get(0) {
+        Some(info) => Ok(Some(info.to_owned())),
+        None => Ok(None),
+    }
+}
+
+pub fn exists(cmd: &mut Command, container: &Container) -> Result<bool> {
+    let containers = ps(cmd)?;
+
+    Ok(containers
+        .iter()
+        .find(|it| it.names.contains(&container.name))
+        .is_some())
+}
+
+pub fn do_log<C: Client>(client: &C, container: &Container) -> Result<Log> {
+    let mut cmd = client.command();
+
+    build_log_command(&mut cmd, container);
+
+    match cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
         Ok(child) => Ok(Log { child }),
         Err(e) => Err(Context::new()
             .source(e)
@@ -180,20 +227,11 @@ pub fn do_log(log_command: &mut Command) -> Result<Log> {
     }
 }
 
-pub fn wait_for(mut command: Command, container: &Container) -> Result<()> {
+pub fn wait_for<C: Client>(client: &C, container: &Container) -> Result<()> {
     let result = match &container.wait_strategy {
         Some(strategy) => match strategy {
-            WaitStrategy::LogMessage { pattern } => {
-                build_log_command(&mut command, container);
-                match do_log(&mut command) {
-                    Ok(log) => wait_for_log(&pattern, log),
-                    Err(e) => Err(Context::new()
-                        .source(e)
-                        .info("message", "Waiting for log output failed")
-                        .into_error(ErrorType::LogError)),
-                }
-            }
-            WaitStrategy::HealthCheck => wait_for_health_check(&mut command, container),
+            WaitStrategy::LogMessage { pattern } => wait_for_log(client, container, pattern),
+            WaitStrategy::HealthCheck => wait_for_health_check(client, container),
         },
         None => Ok(()),
     };
@@ -203,7 +241,17 @@ pub fn wait_for(mut command: Command, container: &Container) -> Result<()> {
     result
 }
 
-pub fn wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
+fn wait_for_log<C: Client>(client: &C, container: &Container, pattern: &Regex) -> Result<()> {
+    match do_log(client, container) {
+        Ok(log) => do_wait_for_log(pattern, log),
+        Err(e) => Err(Context::new()
+            .source(e)
+            .info("message", "Waiting for log output failed")
+            .into_error(ErrorType::LogError)),
+    }
+}
+
+fn do_wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
     match log.stream() {
         Some(read) => {
             for line in read.lines() {
@@ -236,38 +284,29 @@ pub fn wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
         .into_error(ErrorType::WaitError))
 }
 
-fn wait_for_health_check(command: &mut Command, container: &Container) -> Result<()> {
-    add_health_check_run_args(command, container);
-
+fn wait_for_health_check<C: Client>(client: &C, container: &Container) -> Result<()> {
     loop {
-        debug!("checking health for {}", &container.name);
-        let output = run_and_wait_for_command(command)?;
-        match output.status.code() {
-            Some(0) => {
-                debug!("healthcheck succeeded");
-                return Ok(());
+        debug!("Checking health for {}", &container.name);
+
+        match inspect(client, container)? {
+            Some(info) => {
+                if let Some(status) = info.state.health.status {
+                    match status {
+                        ContainerStatus::Healthy => return Ok(()),
+                        ContainerStatus::Starting => thread::sleep(Duration::from_millis(200)),
+                        _ => {
+                            return Err(Context::new()
+                                .info("message", "Invalid container status")
+                                .into_error(ErrorType::WaitError))
+                        }
+                    }
+                }
             }
-            Some(1) => {
-                debug!("healthcheck failed");
-                thread::sleep(Duration::from_millis(200));
-            } // not healthy yet
-            Some(code) => {
+            None => {
                 return Err(Context::new()
-                    .info("message", "running healthcheck failed")
-                    .info("command", command)
-                    .info("exit-code", &code)
-                    .info("stderr", &String::from_utf8(output.stderr))
-                    .into_error(ErrorType::CommandError))
-            }
-            _ => {
-                return Err(Context::new()
-                    .info("message", "unknown error")
-                    .into_error(ErrorType::Unrecoverable))
+                    .info("message", "Container not running")
+                    .into_error(ErrorType::WaitError))
             }
         }
     }
-}
-
-fn add_health_check_run_args(command: &mut Command, container: &Container) {
-    command.arg("healthcheck").arg("run").arg(&container.name);
 }

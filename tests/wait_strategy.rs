@@ -1,5 +1,5 @@
 use contain_rs::{
-    client::{podman::Podman, Client, Handle},
+    client::{podman::Podman, Client, Handle, Docker},
     container::{Container, HealthCheck, Image, WaitStrategy, postgres::Postgres},
 };
 use rstest::*;
@@ -11,9 +11,14 @@ fn podman() -> Podman {
     Podman::new()
 }
 
+#[fixture]
+fn docker() -> Docker {
+    Docker::new()
+}
+
 #[rstest]
-#[case::podman_port_exposure(podman())]
-// #[case::docker_port_exposure(docker(), "8082")]
+#[case::podman_wait_for_log(podman())]
+#[case::docker_wait_for_log(docker())]
 fn test_wait_for_log(#[case] client: impl Client) {
     let container = Container::from_image(Image::from_name("docker.io/library/nginx")).wait_for(
         WaitStrategy::LogMessage {
@@ -25,18 +30,19 @@ fn test_wait_for_log(#[case] client: impl Client) {
 
     std::thread::sleep(Duration::from_secs(2));
 
-    assert!(client.wait(&container).is_ok());
+    client.wait(&container).unwrap();
+    client.rm(&container).unwrap();
 }
 
 #[rstest]
-#[case::podman_port_exposure(podman())]
-// #[case::docker_port_exposure(docker(), "8082")]
+#[case::podman_wait_for_healthcheck(podman())]
+#[case::docker_wait_for_healthchecke(docker())]
 fn test_wait_for_health_check(#[case] client: impl Client) {
     let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
         .health_check(HealthCheck::new("curl http://localhost || exit 1"))
         .wait_for(WaitStrategy::HealthCheck);
 
     client.run(&container).unwrap();
-
-    assert!(client.wait(&container).is_ok());
+    client.wait(&container).unwrap();
+    client.rm(&container).unwrap();
 }
