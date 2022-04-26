@@ -172,7 +172,9 @@ pub fn inspect<C: Client>(
             } else {
                 Err(Context::new()
                     .info("message", "Unexpected error while inspecting container")
-                    .into_error(ErrorType::Unrecoverable))
+                    .info("stderr", &stderr)
+                    .info("stdout", &stdout)
+                    .into_error(ErrorType::CommandError))
             }
         }
     }
