@@ -290,8 +290,8 @@ fn wait_for_health_check<C: Client>(client: &C, container: &Container) -> Result
 
         match inspect(client, container)? {
             Some(info) => {
-                if let Some(status) = info.state.health.status {
-                    match status {
+                if let Some(health) = info.state.health {
+                    match health.status {
                         ContainerStatus::Healthy => return Ok(()),
                         ContainerStatus::Starting => thread::sleep(Duration::from_millis(200)),
                         _ => {

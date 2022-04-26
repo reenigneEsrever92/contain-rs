@@ -18,14 +18,14 @@ pub struct DetailedContainerInfo {
 pub struct ContainerState {
     #[serde(alias = "Running")]
     pub running: bool,
-    #[serde(alias = "Health")]
-    pub health: ContainerHealth,
+    #[serde(alias = "Healthcheck")]
+    pub health: Option<HealthCheck>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct ContainerHealth {
+pub struct HealthCheck {
     #[serde(alias = "Status")]
-    pub status: Option<ContainerStatus>,
+    pub status: ContainerStatus,
 }
 
 ///
