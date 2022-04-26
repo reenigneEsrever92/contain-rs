@@ -5,7 +5,7 @@ use crate::{container::Container, error::Result, rt::DetailedContainerInfo};
 use super::{
     shared::{
         build_rm_command, build_run_command, build_stop_command, do_log, inspect,
-        run_and_wait_for_command, wait_for,
+        run_and_wait_for_command, wait_for, exists, ps,
     },
     Client, ContainerHandle, Log,
 };
@@ -99,16 +99,19 @@ impl Client for Docker {
         inspect(self, container)
     }
 
-    fn exists(&self, _container: &Container) -> Result<bool> {
-        todo!()
+    fn exists(&self, container: &Container) -> Result<bool> {
+        let mut cmd = self.build_command();
+
+        exists(&mut cmd, container)
     }
 
-    fn runs(&self, _container: &Container) -> Result<bool> {
-        todo!()
+    fn runs(&self, container: &Container) -> Result<bool> {
+        Ok(self.inspect(container)?.is_some())
     }
 
     fn ps(&self) -> Result<Vec<crate::rt::ContainerInfo>> {
-        todo!()
+        let mut cmd = self.build_command();
+        ps(&mut cmd)
     }
 
     fn wait(&self, container: &Container) -> Result<()> {

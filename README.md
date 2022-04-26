@@ -8,17 +8,28 @@ Docker is planned, as well. I just happened to start with podman since I like it
 
 For usage take a look at the [Documentation](https://docs.rs/contain-rs/0.1.3/contain_rs/)
 
-## TODO
+## Quick Start Guide
 
-- [x] improve error types
-- [x] improve error reporting
-- [x] handle std error for child processes
-- [x] implement exposed ports
-- [x] check status before running commands
-- [x] extract comman parts into shared module
-- [x] implement healthcheck wait strategy
-- [ ] add docker implementation
-- [ ] create image macro, to create new images from structs easily
-- [ ] add env vars and flags to parameterize clis (DOCKER_HOST, etc.)
-- [ ] add a few images
+Add containers to your Cargo.toml
 
+```toml
+[dependencies]
+contain-rs = "0.1"
+```
+
+Create a client and start a container:
+
+```rust
+use contain_rs::{
+    client::{docker::Docker, Client, Handle},
+    container::{Container, Image},
+};
+
+let docker = Docker::new();
+
+let container = Container::from_image(Image::from_name("docker.io/library/nginx"));
+
+let handle = podman.create(container);
+
+handle.run()
+```

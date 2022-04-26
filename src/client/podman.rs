@@ -102,13 +102,13 @@ impl Client for Podman {
     }
 
     fn inspect(&self, container: &Container) -> Result<Option<DetailedContainerInfo>> {
-        inspect(self, &container)
+        inspect(self, container)
     }
 
     fn exists(&self, container: &Container) -> Result<bool> {
         let mut cmd = self.build_command();
 
-        exists(&mut cmd, &container)
+        exists(&mut cmd, container)
     }
 
     fn runs(&self, container: &Container) -> Result<bool> {

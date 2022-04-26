@@ -132,7 +132,7 @@ fn add_health_check_args(command: &mut Command, container: &Container) {
     if let Some(check) = &container.health_check {
         command
             .arg("--health-cmd")
-            .arg(format!("CMD-SHELL {}", check.command));
+            .arg(&check.command);
 
         if let Some(start_period) = check.start_period {
             command.arg(format!("--health-start-period={}s", start_period.as_secs()));

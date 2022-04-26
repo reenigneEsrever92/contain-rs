@@ -18,7 +18,8 @@ pub struct DetailedContainerInfo {
 pub struct ContainerState {
     #[serde(alias = "Running")]
     pub running: bool,
-    #[serde(alias = "Healthcheck")]
+    // currently these are used for poth docker and podman
+    #[serde(alias = "Healthcheck", alias = "Health")]
     pub health: Option<HealthCheck>,
 }
 
@@ -30,15 +31,15 @@ pub struct HealthCheck {
 
 ///
 /// Health status of a container.
-/// 
+///
 /// ```
 /// use contain_rs::rt::ContainerStatus;
-/// 
+///
 /// assert_eq!(serde_json::from_str::<ContainerStatus>("\"starting\"").unwrap(), ContainerStatus::Starting);
 /// assert_eq!(serde_json::from_str::<ContainerStatus>("\"\"").unwrap(), ContainerStatus::Empty);
-/// 
+///
 /// ```
-/// 
+///
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub enum ContainerStatus {
     #[serde(alias = "")]
