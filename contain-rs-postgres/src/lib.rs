@@ -6,9 +6,7 @@
 ///
 use std::{time::Duration};
 
-use crate::container::{Container, WaitStrategy};
-
-use super::{HealthCheck, Image};
+use contain_rs::container::{HealthCheck, Image, WaitStrategy, Container};
 
 pub struct Postgres {
     db: Option<String>,

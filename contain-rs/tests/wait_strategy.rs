@@ -1,6 +1,6 @@
 use contain_rs::{
-    client::{podman::Podman, Client, Handle, Docker},
-    container::{Container, HealthCheck, Image, WaitStrategy, postgres::Postgres},
+    client::{podman::Podman, Client, Docker},
+    container::{Container, HealthCheck, Image, WaitStrategy},
 };
 use rstest::*;
 

@@ -1,0 +1,15 @@
+[package]
+name = "contain-rs-postgres"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+description = "contain-rs postgres images"
+repository = "https://github.com/reenigneEsrever92/contain-rs"
+documentation = "https://docs.rs/contain-rs"
+readme = "README.md"
+categories = ["development-tools::testing"]
+
+[dependencies]
+contain-rs = { path = "../contain-rs" }
+
+[dev-dependencies]

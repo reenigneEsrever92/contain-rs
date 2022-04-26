@@ -11,10 +11,6 @@ use std::{fmt::Display, time::Duration};
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
-pub mod postgres;
-
-pub use self::postgres::Postgres;
-
 #[derive(Clone)]
 pub struct HealthCheck {
     pub command: String,

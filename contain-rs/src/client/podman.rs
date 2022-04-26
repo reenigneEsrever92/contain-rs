@@ -1,25 +1,29 @@
 use std::process::Command;
 
-use crate::{container::Container, error::Result, rt::DetailedContainerInfo};
+use crate::{
+    container::*,
+    error::Result,
+    rt::{ContainerInfo, DetailedContainerInfo},
+};
 
 use super::{
     shared::{
-        build_rm_command, build_run_command, build_stop_command, do_log, inspect,
-        run_and_wait_for_command, wait_for, exists, ps,
+        build_rm_command, build_run_command, build_stop_command, do_log, exists, inspect, ps,
+        run_and_wait_for_command_infallible, wait_for,
     },
     Client, ContainerHandle, Log,
 };
 
 ///
-/// The Docker struct is used for acessing the docker cli.
+/// The Podman struct is used for acessing the podman cli.
 ///
 /// ```
 /// use contain_rs::{
-///     client::{docker::Docker, Client, Handle},
-///     container::{postgres::Postgres, Container, Image, HealthCheck, WaitStrategy},
+///     client::{podman::Podman, Client, Handle},
+///     container::{Container, Image, HealthCheck, WaitStrategy},
 /// };
 ///
-/// let client = Docker::new();
+/// let client = Podman::new();
 ///
 /// let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
 ///     .health_check(HealthCheck::new("curl http://localhost || exit 1"))
@@ -32,57 +36,59 @@ use super::{
 ///
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct Docker {
+pub struct Podman {
     host: Option<String>,
 }
 
-impl Docker {
+impl Podman {
+    const BINARY: &'static str = "podman";
+
     pub fn new() -> Self {
         Self { host: None }
     }
 
     fn build_command(&self) -> Command {
-        Command::new("docker")
+        Command::new(Self::BINARY)
     }
 }
 
-impl Client for Docker {
-    type ClientType = Docker;
+impl Client for Podman {
+    type ClientType = Self;
 
     fn command(&self) -> Command {
         self.build_command()
     }
 
-    fn create(&self, container: Container) -> super::ContainerHandle<Self::ClientType> {
+    fn create(&self, container: Container) -> ContainerHandle<Podman> {
         ContainerHandle {
-            client: self.clone(),
-            container,
+            client: self.to_owned(),
+            container: container,
         }
     }
 
     fn run(&self, container: &Container) -> Result<()> {
-        let mut cmd = self.build_command();
+        let mut command = self.build_command();
 
-        build_run_command(&mut cmd, container);
-        run_and_wait_for_command(&mut cmd)?;
+        build_run_command(&mut command, container);
+        run_and_wait_for_command_infallible(&mut command)?;
 
         Ok(())
     }
 
     fn stop(&self, container: &Container) -> Result<()> {
-        let mut cmd = self.build_command();
+        let mut command = self.build_command();
 
-        build_stop_command(&mut cmd, container);
-        run_and_wait_for_command(&mut cmd)?;
+        build_stop_command(&mut command, container);
+        run_and_wait_for_command_infallible(&mut command)?;
 
         Ok(())
     }
 
     fn rm(&self, container: &Container) -> Result<()> {
-        let mut cmd = self.build_command();
+        let mut command = self.build_command();
 
-        build_rm_command(&mut cmd, container);
-        run_and_wait_for_command(&mut cmd)?;
+        build_rm_command(&mut command, container);
+        run_and_wait_for_command_infallible(&mut command)?;
 
         Ok(())
     }
@@ -109,8 +115,9 @@ impl Client for Docker {
         Ok(self.inspect(container)?.is_some())
     }
 
-    fn ps(&self) -> Result<Vec<crate::rt::ContainerInfo>> {
+    fn ps(&self) -> Result<Vec<ContainerInfo>> {
         let mut cmd = self.build_command();
+
         ps(&mut cmd)
     }
 
