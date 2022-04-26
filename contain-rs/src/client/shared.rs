@@ -11,7 +11,7 @@ use regex::Regex;
 use crate::{
     container::{Container, WaitStrategy},
     error::{Context, ErrorType, Result},
-    rt::{ContainerInfo, ContainerStatus, DetailedContainerInfo},
+    rt::{ContainerStatus, DetailedContainerInfo},
 };
 
 use super::{Client, Log};
@@ -59,38 +59,12 @@ pub fn run_and_wait_for_command(command: &mut Command) -> Result<Output> {
     }
 }
 
-pub fn run_and_wait_for_command_2(command: &mut Command) -> Result<Output> {
-    debug!("Run and wait for command: {:?}", command);
-
-    let child = command
-        .stdout(Stdio::piped()) // TODO fm - Sometimes podman asks the user for which repo to use. This is currently ignored.
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-
-    let result = child.wait_with_output();
-
-    debug!("Command result: {:?}", result);
-
-    match result {
-        Ok(output) => Ok(output),
-        Err(e) => Err(Context::new()
-            .info("message", "Io error while getting process output")
-            .source(e)
-            .into_error(ErrorType::Unrecoverable)),
-    }
-}
-
 pub fn build_log_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
     command.arg("logs").arg("-f").arg(&container.name)
 }
 
 pub fn build_rm_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
     command.arg("rm").arg("-f").arg(&container.name)
-}
-
-pub fn build_ps_command<'a>(command: &'a mut Command) -> &'a Command {
-    command.arg("ps").arg("--format").arg("json")
 }
 
 pub fn build_stop_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
@@ -130,9 +104,7 @@ fn add_env_var_args(command: &mut Command, container: &Container) {
 
 fn add_health_check_args(command: &mut Command, container: &Container) {
     if let Some(check) = &container.health_check {
-        command
-            .arg("--health-cmd")
-            .arg(&check.command);
+        command.arg("--health-cmd").arg(&check.command);
 
         if let Some(start_period) = check.start_period {
             command.arg(format!("--health-start-period={}s", start_period.as_secs()));
@@ -165,21 +137,6 @@ fn add_export_ports_args(command: &mut Command, container: &Container) {
     })
 }
 
-pub fn ps(cmd: &mut Command) -> Result<Vec<ContainerInfo>> {
-    build_ps_command(cmd);
-
-    let output = run_and_wait_for_command_infallible(cmd)?;
-
-    match serde_json::from_str(&output) {
-        Ok(vec) => Ok(vec),
-        Err(e) => Err(Context::new()
-            .source(e)
-            .info("reason", "could not parse json")
-            .info("json", &output)
-            .into_error(ErrorType::JsonError)),
-    }
-}
-
 pub fn inspect<C: Client>(
     client: &C,
     container: &Container,
@@ -188,29 +145,37 @@ pub fn inspect<C: Client>(
 
     build_inspect_command(&mut cmd, container);
 
-    let json = run_and_wait_for_command_infallible(&mut cmd)?;
+    let output = run_and_wait_for_command(&mut cmd)?;
 
-    let container_infos: Vec<DetailedContainerInfo> = serde_json::from_str(&json).map_err(|e| {
-        Context::new()
-            .source(e)
-            .info("message", "could not parse inspect output")
-            .info("json", &json)
-            .into_error(ErrorType::JsonError)
-    })?;
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let stderr = String::from_utf8(output.stderr).unwrap();
 
-    match container_infos.get(0) {
-        Some(info) => Ok(Some(info.to_owned())),
-        None => Ok(None),
+    match output.status.code() {
+        Some(0) => {
+            let container_infos: Vec<DetailedContainerInfo> = serde_json::from_str(&stdout)
+                .map_err(|e| {
+                    Context::new()
+                        .source(e)
+                        .info("message", "could not parse inspect output")
+                        .info("json", &stdout)
+                        .into_error(ErrorType::JsonError)
+                })?;
+
+            match container_infos.get(0) {
+                Some(info) => Ok(Some(info.to_owned())),
+                None => Ok(None),
+            }
+        }
+        _ => {
+            if stderr.to_uppercase().contains("NO SUCH OBJECT") {
+                Ok(None)
+            } else {
+                Err(Context::new()
+                    .info("message", "Unexpected error while inspecting container")
+                    .into_error(ErrorType::Unrecoverable))
+            }
+        }
     }
-}
-
-pub fn exists(cmd: &mut Command, container: &Container) -> Result<bool> {
-    let containers = ps(cmd)?;
-
-    Ok(containers
-        .iter()
-        .find(|it| it.names.contains(&container.name))
-        .is_some())
 }
 
 pub fn do_log<C: Client>(client: &C, container: &Container) -> Result<Log> {

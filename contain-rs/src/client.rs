@@ -1,34 +1,30 @@
 //!
 //! This module contains the traits that represent the bare functiionality of a client.
-//! 
+//!
 //! See [Podman] for usage of the podman client implementation.
-//! 
+//!
 
 use std::{
     io::{BufRead, BufReader},
     process::{Child, Command},
 };
 
-use crate::{
-    container::{Container},
-    error::Result,
-    rt::{DetailedContainerInfo, ContainerInfo},
-};
+use crate::{container::Container, error::Result, rt::DetailedContainerInfo};
 
-pub mod podman;
 pub mod docker;
+pub mod podman;
 pub mod shared;
 
-pub use self::podman::Podman;
 pub use self::docker::Docker;
+pub use self::podman::Podman;
 
 ///
-/// The client Trait represents a way to access a client. 
-/// 
+/// The client Trait represents a way to access a client.
+///
 /// It's implemented by the [Podman] struct for example. And will be for docker as well.
 /// If you do that for any specific Type you get [`handles`](Handle) for free.
-/// 
-/// 
+///
+///
 pub trait Client: Clone {
     type ClientType: Client;
 
@@ -41,16 +37,15 @@ pub trait Client: Clone {
     fn inspect(&self, container: &Container) -> Result<Option<DetailedContainerInfo>>;
     fn exists(&self, container: &Container) -> Result<bool>;
     fn runs(&self, container: &Container) -> Result<bool>;
-    fn ps(&self) -> Result<Vec<ContainerInfo>>;
     fn wait(&self, container: &Container) -> Result<()>;
 }
 
 ///
 /// A handle is a way to interact with a container.
-/// 
+///
 /// When you create a container using a [Client] it will return one of these.
 /// The handle automatically stops and removes the container, when it goes out of scope.
-/// 
+///
 pub trait Handle {
     fn run(&self);
     fn stop(&self);

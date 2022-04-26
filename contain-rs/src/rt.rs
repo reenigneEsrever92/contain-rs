@@ -1,12 +1,6 @@
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct ContainerInfo {
-    #[serde(alias = "Names")]
-    pub names: Vec<String>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
 pub struct DetailedContainerInfo {
     #[serde(alias = "Id")]
     pub id: String,
