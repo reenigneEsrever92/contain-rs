@@ -17,6 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: podman --version
-    # - name: Run tests
-    #   run: cargo test
+      run: cargo build
+    - name: Run tests
+      run: cargo test

@@ -13,22 +13,6 @@ use super::{
 ///
 /// The Podman struct is used for acessing the podman cli.
 ///
-/// ```
-/// use contain_rs::{
-///     client::{podman::Podman, Client, Handle},
-///     container::{Container, Image, HealthCheck, WaitStrategy},
-/// };
-///
-/// let client = Podman::new();
-///
-/// let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
-///     .health_check(HealthCheck::new("curl http://localhost || exit 1"))
-///     .wait_for(WaitStrategy::HealthCheck);
-///
-/// client.run(&container).unwrap();
-/// client.wait(&container).unwrap();
-/// client.rm(&container).unwrap();
-/// ```
 ///
 #[allow(dead_code)]
 #[derive(Clone)]
