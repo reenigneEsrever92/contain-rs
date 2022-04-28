@@ -26,6 +26,7 @@ fn test_map_exposure(#[case] client: impl Client, #[case] port: i32) {
     let handle = client.create(container);
 
     handle.run();
+    handle.wait();
 
     let response = reqwest::blocking::get(format!("http://localhost:{}", port)).unwrap();
 

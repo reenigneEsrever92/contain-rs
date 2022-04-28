@@ -48,6 +48,8 @@ pub trait Client: Clone {
 ///
 pub trait Handle {
     fn run(&self);
+    fn wait(&self);
+    fn run_and_wait(&self);
     fn stop(&self);
     fn rm(&self);
     fn log(&self) -> Option<Log>;
@@ -84,7 +86,19 @@ impl<T: Client> Handle for ContainerHandle<T> {
     fn run(&self) {
         if !self.is_running() {
             self.client.run(&self.container).unwrap();
+        }
+    }
+
+    fn wait(&self) {
+        if !self.is_running() {
             self.client.wait(&self.container).unwrap();
+        }
+    }
+
+    fn run_and_wait(&self) {
+        if !self.is_running() {
+            self.run();
+            self.wait();
         }
     }
 

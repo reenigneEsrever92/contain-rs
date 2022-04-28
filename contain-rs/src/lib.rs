@@ -17,7 +17,8 @@
 //! 
 //! let handle = podman.create(container);
 //! 
-//! handle.run()
+//! handle.run();
+//! handle.wait();
 //! 
 //! // when the handle gets out of scope the container is stopped and removed
 //! ```
