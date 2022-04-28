@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use log::debug;
+use log::{debug, trace};
 use regex::Regex;
 
 use crate::{
@@ -48,7 +48,7 @@ pub fn run_and_wait_for_command(command: &mut Command) -> Result<Output> {
 
     let result = child.wait_with_output();
 
-    debug!("Command result: {:?}", result);
+    trace!("Command result: {:?}", result);
 
     match result {
         Ok(output) => Ok(output),
@@ -160,6 +160,8 @@ pub fn inspect<C: Client>(
                         .info("json", &stdout)
                         .into_error(ErrorType::JsonError)
                 })?;
+
+            debug!("Inspect json: {}", serde_json::to_string_pretty(&container_infos).unwrap());
 
             match container_infos.get(0) {
                 Some(info) => Ok(Some(info.to_owned())),

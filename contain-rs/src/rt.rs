@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DetailedContainerInfo {
     #[serde(alias = "Id")]
     pub id: String,
@@ -8,7 +8,7 @@ pub struct DetailedContainerInfo {
     pub state: ContainerState,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ContainerState {
     #[serde(alias = "Running")]
     pub running: bool,
@@ -17,7 +17,7 @@ pub struct ContainerState {
     pub health: Option<HealthCheck>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HealthCheck {
     #[serde(alias = "Status")]
     pub status: ContainerStatus,
@@ -34,7 +34,7 @@ pub struct HealthCheck {
 ///
 /// ```
 ///
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub enum ContainerStatus {
     #[serde(alias = "")]
     Empty,
