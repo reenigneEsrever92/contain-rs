@@ -34,15 +34,15 @@ fn test_wait_for_log(#[case] client: impl Client) {
     client.rm(&container).unwrap();
 }
 
-#[rstest]
+// #[rstest]
 // #[case::podman_wait_for_healthcheck(podman())]
 // #[case::docker_wait_for_healthcheck(docker())]
-fn test_wait_for_health_check(#[case] client: impl Client) {
-    let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
-        .health_check(HealthCheck::new("curl http://localhost || exit 1"))
-        .wait_for(WaitStrategy::HealthCheck);
+// fn test_wait_for_health_check(#[case] client: impl Client) {
+//     let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
+//         .health_check(HealthCheck::new("curl http://localhost || exit 1"))
+//         .wait_for(WaitStrategy::HealthCheck);
 
-    client.run(&container).unwrap();
-    client.wait(&container).unwrap();
-    client.rm(&container).unwrap();
-}
+//     client.run(&container).unwrap();
+//     client.wait(&container).unwrap();
+//     client.rm(&container).unwrap();
+// }
