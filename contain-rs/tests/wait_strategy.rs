@@ -35,7 +35,7 @@ fn test_wait_for_log(#[case] client: impl Client) {
 }
 
 #[rstest]
-#[case::podman_wait_for_healthcheck(podman())]
+// #[case::podman_wait_for_healthcheck(podman())]
 // #[case::docker_wait_for_healthcheck(docker())]
 fn test_wait_for_health_check(#[case] client: impl Client) {
     let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
