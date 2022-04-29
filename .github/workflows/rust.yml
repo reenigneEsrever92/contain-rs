@@ -17,4 +17,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: systemctl list-units
+      run: podman "run" "-d" "--name" "contain-rs-KIWi8MEQ" "--health-cmd" "curl http://localhost || exit 1" "docker.io/library/nginx:latest" 
