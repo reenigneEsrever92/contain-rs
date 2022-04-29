@@ -36,7 +36,7 @@ fn test_wait_for_log(#[case] client: impl Client) {
 
 #[rstest]
 #[case::podman_wait_for_healthcheck(podman())]
-// #[case::docker_wait_for_healthcheck(docker())]
+#[case::docker_wait_for_healthcheck(docker())]
 fn test_wait_for_health_check(#[case] client: impl Client) {
     pretty_env_logger::formatted_timed_builder().filter_level(log::LevelFilter::Debug).init();
 
