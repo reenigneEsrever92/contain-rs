@@ -1,4 +1,4 @@
-name: Build and Test
+name: Test
 
 on:
   push:
@@ -16,8 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Build
+    - name: Test
       run: |
           loginctl enable-linger runner
           sleep 1
-          podman "run" "-d" "--name" "contain-rs-KIWi8MEQ" "--health-cmd" "curl http://localhost || exit 1" "docker.io/library/nginx:latest" 
+          cargo test
