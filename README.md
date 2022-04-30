@@ -2,9 +2,7 @@
 
 # contain-rs
 
-A tool to use podman containers with rust.
-
-Docker is planned, as well. I just happened to start with podman since I like it a lot.
+A tool to use docker and podman containers with rust.
 
 For usage take a look at the [Documentation](https://docs.rs/contain-rs/0.1.3/contain_rs/)
 
@@ -31,5 +29,7 @@ let container = Container::from_image(Image::from_name("docker.io/library/nginx"
 
 let handle = podman.create(container);
 
-handle.run()
+handle.run();
+handle.wait();
+handle.rm();
 ```
