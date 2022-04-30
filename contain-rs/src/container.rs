@@ -1,15 +1,19 @@
 //!
 //! The container module contains all the basic data types that make up a container.
-//! 
+//!
 //! Containers can then be run through [`clients`](crate::client::Client).
-//! 
+//!
 //! See [Container] for further information on containers.
-//! 
+//!
 
 use std::{fmt::Display, time::Duration};
 
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
+
+pub trait IntoContainer {
+    fn into_container(self) -> Container;
+}
 
 #[derive(Clone)]
 pub struct HealthCheck {
@@ -54,16 +58,16 @@ impl HealthCheck {
 
 ///
 /// A wait strategy can be used to wait for a cotnainer to be ready.
-/// 
+///
 #[derive(Clone)]
 pub enum WaitStrategy {
     ///
     /// Waits for a log message to appear.
-    /// 
+    ///
     LogMessage { pattern: Regex },
     ///
     /// Waits for the container to be healty.
-    /// 
+    ///
     HealthCheck,
 }
 
@@ -160,9 +164,9 @@ impl From<&Image> for String {
 
 ///
 /// A container makes up the schedulable unit of this crate.
-/// 
+///
 /// You can define an [Image] for it to be used and define port mappings and environment variables on it for example.
-/// 
+///
 #[derive(Clone)]
 pub struct Container {
     pub name: String,
@@ -186,7 +190,7 @@ impl Container {
 
     ///
     /// Creates a new container from and [Image]
-    /// 
+    ///
     pub fn from_image(image: Image) -> Self {
         Container {
             name: format!("contain-rs-{}", Self::gen_hash()),
@@ -202,17 +206,17 @@ impl Container {
 
     ///
     /// Define a specific name for the container.
-    /// 
+    ///
     /// In case no explicit name is defined contain-rs will generate one as the name is being used by the [Client] for interaction.
-    /// 
+    ///
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.into();
         self
     }
 
     ///
-    /// Map a port from `source` on the host to `target` in the container. 
-    /// 
+    /// Map a port from `source` on the host to `target` in the container.
+    ///
     pub fn map_port(mut self, source: impl Into<Port>, target: impl Into<Port>) -> Self {
         self.port_mappings.push(PortMapping {
             source: source.into(),
@@ -223,7 +227,7 @@ impl Container {
 
     ///
     /// Define an environment variable for the container.
-    /// 
+    ///
     pub fn env_var(mut self, var: impl Into<EnvVar>) -> Self {
         let env_var = var.into();
         self.env_vars.push(env_var);
@@ -232,7 +236,7 @@ impl Container {
 
     ///
     /// Add a [WaitStrategy] to be used when running the container.
-    /// 
+    ///
     pub fn wait_for(mut self, strategy: WaitStrategy) -> Self {
         self.wait_strategy = Some(strategy);
         self
@@ -240,9 +244,9 @@ impl Container {
 
     ///
     /// Add some additional wait time for concidering the container healthy.
-    /// 
-    /// Contain-rs waits this additional time after the [WaitStrategy] has been concidered successful. 
-    /// 
+    ///
+    /// Contain-rs waits this additional time after the [WaitStrategy] has been concidered successful.
+    ///
     pub fn additional_wait_period(mut self, period: Duration) -> Self {
         self.additional_wait_period = period;
         self
@@ -250,9 +254,9 @@ impl Container {
 
     ///
     /// Add an arbitrary healthcheck to the container.
-    /// 
+    ///
     /// Some images may define healthchecks already, yet you can use this one to define one yourself explicitly.
-    /// 
+    ///
     pub fn health_check(mut self, health_check: HealthCheck) -> Self {
         self.health_check = Some(health_check);
         self

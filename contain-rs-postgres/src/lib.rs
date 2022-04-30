@@ -4,9 +4,9 @@
 /// ## Usage:
 ///
 ///
-use std::{time::Duration};
+use std::time::Duration;
 
-use contain_rs::container::{HealthCheck, Image, WaitStrategy, Container};
+use contain_rs::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
 
 pub struct Postgres {
     db: Option<String>,
@@ -39,12 +39,12 @@ impl Postgres {
         self.db = Some(db.to_string());
         self
     }
+}
 
-    pub fn container(self) -> Container {
+impl IntoContainer for Postgres {
+    fn into_container(self) -> Container {
         let mut container = Container::from_image(Image::from_name(Postgres::IMAGE))
-            .health_check(
-                HealthCheck::new("pg_isready")
-            )
+            .health_check(HealthCheck::new("pg_isready"))
             .additional_wait_period(Duration::from_secs(2))
             .wait_for(WaitStrategy::HealthCheck)
             .env_var(("POSTGRES_PASSWORD", self.password));
