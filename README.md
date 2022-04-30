@@ -6,7 +6,7 @@ A tool to use docker and podman containers with rust.
 
 For usage take a look at the [Documentation](https://docs.rs/contain-rs/0.1.3/contain_rs/)
 
-## Quick Start Guide
+## Quick Start
 
 Add containers to your Cargo.toml
 
