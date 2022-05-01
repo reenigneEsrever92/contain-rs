@@ -1,11 +1,18 @@
 use contain_rs::{
     client::{Client, Podman},
-    container::{Container, Image, IntoContainer},
+    container::{Container, IntoContainer},
 };
+use contain_rs_builder::{declare, image};
 use contain_rs_macro::container;
 
-#[container(image = "docker.io/library/nginx")]
+#[container(declare(image("docker.io/library/nginx"), []))]
 struct SimpleImage;
+
+impl SimpleImage {
+    fn new() -> Self {
+        Self {}
+    }
+}
 
 fn main() {
     let podman = Podman::new();

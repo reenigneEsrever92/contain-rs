@@ -12,5 +12,6 @@ categories = ["development-tools::testing"]
 [dependencies]
 contain-rs = { path = "../contain-rs" }
 contain-rs-macro = { path = "../contain-rs-macro" }
+contain-rs-builder = { path = "../contain-rs-builder" }
 
 [dev-dependencies]

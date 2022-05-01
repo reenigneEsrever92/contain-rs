@@ -1,13 +1,9 @@
 use std::time::Duration;
 
-use contain_rs::{
-    container::{Container, Image, IntoContainer, TryIntoContainer},
-    error::{Context, ErrorType::ContainerError, Result},
-};
+use contain_rs::container::{Container, TryIntoContainer};
 
 #[derive(Clone)]
 pub enum Component {
-    Image(String),
     EnvVar(String, String),
     Port(u32, u32),
     HealthCheck(
@@ -26,18 +22,23 @@ pub enum WaitStrategy {
     LogMessage(String),
 }
 
-pub struct ContainerDecleration(Vec<Component>);
+pub struct ContainerDecleration(Image, Vec<Component>);
 
-pub fn container<T: IntoIterator<Item = Component>>(components: T) -> ContainerDecleration {
-    ContainerDecleration(components.into_iter().collect())
+pub struct Image(String);
+
+pub fn declare<C>(image: Image, components: C) -> ContainerDecleration
+where
+    C: IntoIterator<Item = Component>,
+{
+    ContainerDecleration(image, components.into_iter().collect())
 }
 
 pub fn env_var(key: &str, value: &str) -> Component {
     Component::EnvVar(key.to_string(), value.to_string())
 }
 
-pub fn image(name: &str) -> Component {
-    Component::Image(name.to_string())
+pub fn image(name: &str) -> Image {
+    Image(name.to_string())
 }
 
 pub fn port(host: u32, target: u32) -> Component {
@@ -64,32 +65,10 @@ pub fn wait_for_healthcheck() -> Component {
 
 impl TryIntoContainer for ContainerDecleration {
     fn try_into_container(self) -> contain_rs::error::Result<Container> {
-        Ok(Container::from_image(self.get_image()?))
+        Ok(Container::from_image(
+            contain_rs::container::Image::from_name(&self.0 .0),
+        ))
     }
 }
 
-impl ContainerDecleration {
-    fn get_image(&self) -> Result<Image> {
-        let names: Vec<String> = self
-            .0
-            .iter()
-            .flat_map(|cmp| match cmp {
-                Component::Image(name) => Some(name.clone()),
-                _ => None,
-            })
-            .collect();
-
-        if names.len() > 1 {
-            return Err(Context::new()
-                .info("message", "Mutliple image names specified")
-                .into_error(ContainerError));
-        }
-
-        match names.get(0) {
-            Some(name) => Ok(Image::from_name(name)),
-            None => Err(Context::new()
-                .info("message", "No image name specified")
-                .into_error(ContainerError)),
-        }
-    }
-}
+impl ContainerDecleration {}

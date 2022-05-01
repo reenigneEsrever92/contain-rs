@@ -6,9 +6,12 @@
 ///
 use std::time::Duration;
 
-use contain_rs::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
+use contain_rs::container::{Container, HealthCheck, IntoContainer, WaitStrategy};
+use contain_rs_builder::{declare, image};
+use contain_rs_macro::container;
 
-#[contain_rs_macro::container(image = "docker.io/library/postgres")]
+#[derive(Default)]
+#[container(declare(image("docker.io/library/postgres"), []))]
 struct PostgresBase;
 
 pub struct Postgres {
@@ -46,7 +49,7 @@ impl Postgres {
 
 impl IntoContainer for Postgres {
     fn into_container(self) -> Container {
-        let mut container = PostgresBase::new()
+        let mut container = PostgresBase::default()
             .into_container()
             .health_check(HealthCheck::new("pg_isready"))
             .additional_wait_period(Duration::from_secs(2))
