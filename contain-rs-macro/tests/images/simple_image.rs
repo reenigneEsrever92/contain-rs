@@ -2,23 +2,24 @@ use contain_rs::{
     client::{Client, Podman},
     container::{Container, IntoContainer},
 };
-use contain_rs_builder::{declare, image};
-use contain_rs_macro::container;
+use contain_rs_macro::Container;
 
-#[container(declare(image("docker.io/library/nginx"), []))]
-struct SimpleImage;
-
-impl SimpleImage {
-    fn new() -> Self {
-        Self {}
-    }
+#[derive(Default, Container)]
+#[container(
+    image = "docker.io/library/nginx",
+    health_check_command = "curl http://localhost || exit 1",
+    health_check_timeout = 30000
+)]
+struct SimpleImage {
+    #[env_var("PG_PASSWORD")]
+    password: String,
 }
 
 fn main() {
     let podman = Podman::new();
-    let container = SimpleImage::new().into_container();
+    // let container = SimpleImage::default().into_container();
 
-    podman.run(&container).unwrap();
-    podman.wait(&container).unwrap();
-    podman.rm(&container).unwrap();
+    // podman.run(&container).unwrap();
+    // podman.wait(&container).unwrap();
+    // podman.rm(&container).unwrap();
 }

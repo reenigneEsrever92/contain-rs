@@ -2,7 +2,6 @@
 
 members = [
     "contain-rs",
-    "contain-rs-builder",
     "contain-rs-macro",
     "contain-rs-postgres",
 ]
