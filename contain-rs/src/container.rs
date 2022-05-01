@@ -11,14 +11,26 @@ use std::{fmt::Display, time::Duration};
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
+use crate::error::Result;
+
+pub trait TryIntoContainer {
+    fn try_into_container(self) -> Result<Container>; 
+}
+
 pub trait IntoContainer {
     fn into_container(self) -> Container;
+}
+
+impl<T: TryIntoContainer> IntoContainer for T {
+    fn into_container(self) -> Container {
+        self.try_into_container().unwrap()
+    }
 }
 
 #[derive(Clone)]
 pub struct HealthCheck {
     pub command: String,
-    pub retries: Option<i32>,
+    pub retries: Option<u32>,
     pub interval: Option<Duration>,
     pub start_period: Option<Duration>,
     pub timeout: Option<Duration>,
@@ -35,7 +47,7 @@ impl HealthCheck {
         }
     }
 
-    pub fn retries(mut self, retries: i32) -> Self {
+    pub fn retries(mut self, retries: u32) -> Self {
         self.retries = Some(retries);
         self
     }

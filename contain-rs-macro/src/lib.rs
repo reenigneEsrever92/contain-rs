@@ -1,5 +1,7 @@
 extern crate proc_macro;
 
+use std::collections::HashMap;
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -61,6 +63,7 @@ impl Parse for MacroInput {
 enum ContainerParam {
     Image(String),
     HealthCheck(String),
+    EnvVars(HashMap<String, String>),
 }
 
 fn parse(args: &MacroInput) -> syn::Result<Vec<ContainerParam>> {
@@ -70,28 +73,35 @@ fn parse(args: &MacroInput) -> syn::Result<Vec<ContainerParam>> {
         .map(|expr| match &*expr.left {
             syn::Expr::Path(p) => {
                 if p.path.is_ident("image") {
-                    match &*expr.right {
-                        syn::Expr::Lit(l) => return map_to_image(l),
-                        _ => return Err(syn::Error::new(expr.right.span(), "Expected Literal")),
-                    }
+                    return map_to_image(expr);
                 }
 
                 Err(syn::Error::new(expr.left.span(), "Unknown Image Attribute"))
             }
-            _ => Err(syn::Error::new(
-                expr.left.span(),
-                "Expected Path Expression",
-            )),
+            _ => Err(syn::Error::new(expr.left.span(), "Expected String Literal")),
         })
         .collect();
 
     mapped
 }
 
-fn map_to_image(literal: &ExprLit) -> syn::Result<ContainerParam> {
-    match &literal.lit {
-        Lit::Str(str) => Ok(ContainerParam::Image(str.value())),
-        _ => Err(syn::Error::new(literal.span(), "Expected String Literal")),
+fn map_to_env_vars(expr: &ExprAssign) -> Result<ContainerParam, syn::Error> {
+    match &*expr.right {
+        syn::Expr::Lit(l) => match &l.lit {
+            Lit::Str(str) => Ok(ContainerParam::Image(str.value())),
+            _ => Err(syn::Error::new(l.span(), "Expected String Literal")),
+        },
+        _ => return Err(syn::Error::new(expr.right.span(), "Expected Literal")),
+    }
+}
+
+fn map_to_image(expr: &ExprAssign) -> syn::Result<ContainerParam> {
+    match &*expr.right {
+        syn::Expr::Lit(l) => match &l.lit {
+            Lit::Str(str) => Ok(ContainerParam::Image(str.value())),
+            _ => Err(syn::Error::new(l.span(), "Expected String Literal")),
+        },
+        _ => return Err(syn::Error::new(expr.right.span(), "Expected Literal")),
     }
 }
 
@@ -99,7 +109,7 @@ fn generate_into_container(
     item: &syn::DeriveInput,
     container_params: &Vec<ContainerParam>,
 ) -> TokenStream {
-    let ident = &item.ident; 
+    let ident = &item.ident;
     let image_name = find_image(container_params).unwrap();
 
     println!("Ident: {}", ident);
@@ -123,13 +133,14 @@ fn generate_into_container(
 }
 
 fn find_image(container_params: &Vec<ContainerParam>) -> Option<String> {
-    container_params.iter().find(|it| match it {
-        ContainerParam::Image(_) => true,
-        _ => false,
-    }).map(|it| {
-        match it {
+    container_params
+        .iter()
+        .find(|it| match it {
+            ContainerParam::Image(_) => true,
+            _ => false,
+        })
+        .map(|it| match it {
             ContainerParam::Image(name) => name.to_owned(),
             _ => panic!(),
-        }
-    })
+        })
 }

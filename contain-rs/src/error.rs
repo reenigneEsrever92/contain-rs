@@ -13,6 +13,7 @@ pub enum ErrorType {
     WaitError,
     PsError,
     InspectError,
+    ContainerError,
 }
 
 #[derive(Debug)]
@@ -110,6 +111,7 @@ impl Display for ErrorType {
             ErrorType::PsError => write!(f, "Ps Error"),
             ErrorType::InspectError => write!(f, "Inspect Error"),
             ErrorType::JsonError => write!(f, "Inspect Error"),
+            ErrorType::ContainerError => write!(f, "Container Error"),
         }
     }
 }

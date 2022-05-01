@@ -1,3 +1,4 @@
+
 #[test]
 fn test_images() {
     let t = trybuild::TestCases::new();
