@@ -17,9 +17,9 @@ struct SimpleImage {
 
 fn main() {
     let podman = Podman::new();
-    // let container = SimpleImage::default().into_container();
+    let container = SimpleImage::default().into_container();
 
-    // podman.run(&container).unwrap();
-    // podman.wait(&container).unwrap();
-    // podman.rm(&container).unwrap();
+    podman.run(&container).unwrap();
+    podman.wait(&container).unwrap();
+    podman.rm(&container).unwrap();
 }

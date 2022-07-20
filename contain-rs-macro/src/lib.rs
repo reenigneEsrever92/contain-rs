@@ -5,7 +5,7 @@ use quote::quote;
 use syn::{spanned::Spanned, Attribute, DeriveInput, ExprAssign, ExprCall, ExprLit, Result};
 
 #[proc_macro_derive(Container, attributes(container, env_var))]
-pub fn container(item: TokenStream) -> TokenStream {
+pub fn parse_container(item: TokenStream) -> TokenStream {
     println!("Image Attribute: \n\n");
 
     // println!("ARGS INPUT: {}", &args);
@@ -43,7 +43,7 @@ fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
     })
 }
 
-fn parse_attribute(attr: &Attribute) {
+fn parse_container_attribute(attr: &Attribute) {
     
 }
 
@@ -116,4 +116,29 @@ fn generate_env_impl(args: &ExprLit, item: &DeriveInput) -> TokenStream {
 
     }
     .into()
+}
+
+#[cfg(test)]
+mod test {
+    use quote::quote;
+
+    use crate::parse_container;
+
+    #[test]
+    fn test_parse_derive() {
+        let tokens_in = quote! {
+            #[derive(Default, Container)]
+            #[container(
+                image = "docker.io/library/nginx",
+                health_check_command = "curl http://localhost || exit 1",
+                health_check_timeout = 30000
+            )]
+            struct SimpleImage {
+                password: String,
+            }
+        };
+
+        let tokens_out = parse_container(tokens_in.into());
+    }
+
 }
