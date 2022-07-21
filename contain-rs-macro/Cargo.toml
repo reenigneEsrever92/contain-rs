@@ -14,8 +14,10 @@ proc-macro = true
 
 [dependencies]
 contain-rs = { path = "../contain-rs" }
+contain-rs-parser = { path = "../contain-rs-parser" }
 syn = { version = "1.0", features = ["full" ,"extra-traits"] }
 quote = "1.0"
+proc-macro2 = "1.0"
 
 [dev-dependencies]
 trybuild = "1.0"

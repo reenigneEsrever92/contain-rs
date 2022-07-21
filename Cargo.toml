@@ -4,4 +4,5 @@ members = [
     "contain-rs",
     "contain-rs-macro",
     "contain-rs-postgres",
+    "contain-rs-parser",
 ]
