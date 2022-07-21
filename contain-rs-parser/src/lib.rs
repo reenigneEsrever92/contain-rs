@@ -1,22 +1,17 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
-    spanned::Spanned, Attribute, DeriveInput, ExprAssign, ExprCall, ExprLit, PathSegment, Result,
+    parse::Parser, spanned::Spanned, Attribute, DeriveInput, ExprAssign, ExprCall, ExprLit, LitStr,
+    PathSegment, Result, Token,
 };
 
-pub fn parse_container(item: TokenStream2) -> TokenStream2 {
-    println!("Image Attribute: \n\n");
-
+pub fn container(tokens: TokenStream2) -> TokenStream2 {
     // println!("ARGS INPUT: {}", &args);
-    println!("ITEM INPUT: {}", item);
+    println!("ITEM INPUT: {}", tokens);
+
+    let model = parse_container(tokens);
 
     // let args_ast: ExprCall = syn::parse(args).unwrap();
-    let item_ast: DeriveInput = syn::parse2(item).unwrap();
-
-    // println!("ARGS AST: {:#?}", args_ast);
-    println!("ITEM AST: {:#?}", item_ast);
-
-    let model = parse_derive_input(item_ast);
 
     // let result = generate_into_container(&item_ast, &args_ast);
     println!("OUTPUT: {:#?}", model);
@@ -25,7 +20,38 @@ pub fn parse_container(item: TokenStream2) -> TokenStream2 {
     TokenStream2::new()
 }
 
-#[derive(Debug)]
+fn parse_container(tokens: TokenStream2) -> Result<Model> {
+    let item_ast: DeriveInput = syn::parse2(tokens).unwrap();
+
+    println!("ITEM AST: {:#?}", item_ast);
+
+    parse_derive_input(item_ast)
+}
+
+struct ContainerInput {
+    properties: Vec<ContainerProperty>,
+}
+
+struct ContainerProperty {
+    property_type: PropertyType,
+    operator: Token![=],
+    value: LitStr,
+}
+
+enum PropertyType {
+    Image,
+    HealthCheckCommand,
+}
+
+impl Parser for ContainerInput {
+    type Output = Self;
+
+    fn parse2(self, tokens: TokenStream2) -> Result<Self::Output> {
+        todo!()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 struct Model {
     image: String,
     env_vars: Vec<(String, String)>,
@@ -33,6 +59,7 @@ struct Model {
 
 fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
     let attr = get_container_attribute(&ast)?;
+    let ContainerInput = parse_container_attribute(attr.tokens);
 
     Ok(Model {
         image: "test".to_string(),
@@ -40,7 +67,9 @@ fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
     })
 }
 
-fn parse_container_attribute(attr: &Attribute) {}
+fn parse_container_attribute(attr: TokenStream2) -> Result<ContainerInput> {
+    todo!()
+}
 
 fn get_container_attribute<'a>(input: &'a DeriveInput) -> Result<&'a Attribute> {
     let attrs = input
@@ -125,10 +154,10 @@ fn generate_env_impl(args: &ExprLit, item: &DeriveInput) -> TokenStream2 {
 mod test {
     use quote::quote;
 
-    use crate::parse_container;
+    use crate::{parse_container, Model};
 
     #[test]
-    fn test_parse_derive() {
+    fn test_parse_container() {
         let tokens_in = quote! {
             #[derive(Default, Container)]
             #[container(
@@ -141,6 +170,14 @@ mod test {
             }
         };
 
-        let tokens_out = parse_container(tokens_in);
+        let model = parse_container(tokens_in);
+
+        assert_eq!(
+            model.unwrap(),
+            Model {
+                image: "docker.io/library/nginx".to_string(),
+                env_vars: vec![]
+            }
+        );
     }
 }
