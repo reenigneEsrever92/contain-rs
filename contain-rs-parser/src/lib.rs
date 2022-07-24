@@ -36,9 +36,10 @@ struct ContainerInput {
 
 impl Parse for ContainerInput {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
-        let properties = Vec::new();
+        let mut properties: Vec<ContainerProperty> = Vec::new();
 
         // TODO parse container properties
+        properties.push(input.parse()?);
 
         Ok(ContainerInput { properties })
     }
