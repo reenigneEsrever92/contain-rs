@@ -1,8 +1,10 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
-    parse::Parser, spanned::Spanned, Attribute, DeriveInput, ExprAssign, ExprCall, ExprLit, LitStr,
-    PathSegment, Result, Token,
+    parse::{Parse, Parser},
+    parse2,
+    spanned::Spanned,
+    Attribute, DeriveInput, ExprAssign, ExprCall, ExprLit, LitStr, PathSegment, Result, Token,
 };
 
 pub fn container(tokens: TokenStream2) -> TokenStream2 {
@@ -32,23 +34,31 @@ struct ContainerInput {
     properties: Vec<ContainerProperty>,
 }
 
+impl Parse for ContainerInput {
+    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+        let properties = Vec::new();
+
+        // TODO parse container properties
+
+        Ok(ContainerInput { properties })
+    }
+}
+
 struct ContainerProperty {
     property_type: PropertyType,
     operator: Token![=],
     value: LitStr,
 }
 
+impl Parse for ContainerProperty {
+    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+        input.parse()
+    }
+}
+
 enum PropertyType {
     Image,
     HealthCheckCommand,
-}
-
-impl Parser for ContainerInput {
-    type Output = Self;
-
-    fn parse2(self, tokens: TokenStream2) -> Result<Self::Output> {
-        todo!()
-    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -59,16 +69,23 @@ struct Model {
 
 fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
     let attr = get_container_attribute(&ast)?;
-    let ContainerInput = parse_container_attribute(attr.tokens);
+    // TODO cloning sucks
+    let container_input: ContainerInput = parse2(attr.tokens.clone())?;
+
+    let image: Vec<String> = container_input
+        .properties
+        .iter()
+        .filter(|prop| match prop.property_type {
+            PropertyType::Image => true,
+            _ => false,
+        })
+        .map(|prop| prop.value.value())
+        .collect();
 
     Ok(Model {
-        image: "test".to_string(),
+        image: image.first().unwrap().to_string(),
         env_vars: Vec::new(),
     })
-}
-
-fn parse_container_attribute(attr: TokenStream2) -> Result<ContainerInput> {
-    todo!()
 }
 
 fn get_container_attribute<'a>(input: &'a DeriveInput) -> Result<&'a Attribute> {
