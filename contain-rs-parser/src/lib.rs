@@ -2,7 +2,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
     parse::Parse, punctuated::Punctuated, spanned::Spanned, token::Eq, Attribute, DeriveInput,
-    ExprCall, ExprLit, Lit, Path, Result, Token,
+    ExprCall, Lit, Path, Result, Token,
 };
 
 pub fn container(tokens: TokenStream2) -> TokenStream2 {
@@ -65,6 +65,7 @@ impl Parse for ContainerProperty {
 #[derive(Debug, PartialEq, Eq)]
 struct Model {
     image: String,
+    health_check_command: String,
     env_vars: Vec<(String, String)>,
 }
 
@@ -72,21 +73,35 @@ fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
     let attr = get_container_attribute(&ast)?;
     let container_input: ContainerInput = attr.parse_args()?;
 
-    let image: Option<&ContainerProperty> =
-        container_input.properties.iter().find(|prop| {
-            match prop.property_type.get_ident().unwrap().to_string().as_str() {
-                "image" => true,
-                _ => false,
-            }
-        });
-
     Ok(Model {
-        image: parse_image(image.unwrap())?,
+        image: string_value(find_property(&container_input, "image").unwrap())?,
         env_vars: Vec::new(),
+        health_check_command: string_value(
+            find_property(&container_input, "health_check_command").unwrap(),
+        )?,
     })
 }
 
-fn parse_image(property: &ContainerProperty) -> Result<String> {
+fn find_property<'a>(
+    container_input: &'a ContainerInput,
+    name: &str,
+) -> Option<&'a ContainerProperty> {
+    container_input
+        .properties
+        .iter()
+        .find(|prop| match prop.property_type.get_ident() {
+            Some(ident) => {
+                if ident.to_string().as_str() == name {
+                    true
+                } else {
+                    false
+                }
+            }
+            None => todo!(),
+        })
+}
+
+fn string_value(property: &ContainerProperty) -> Result<String> {
     match &property.value {
         Lit::Str(str) => Ok(str.value().to_string()),
         _ => Err(syn::Error::new_spanned(
@@ -134,6 +149,7 @@ fn get_container_attribute<'a>(input: &'a DeriveInput) -> Result<&'a Attribute> 
     }
 }
 
+#[allow(dead_code)]
 fn generate_into_container(item: &syn::DeriveInput, container_builder: &ExprCall) -> TokenStream2 {
     let ident = &item.ident;
 
@@ -145,33 +161,6 @@ fn generate_into_container(item: &syn::DeriveInput, container_builder: &ExprCall
                 #container_builder.into_container()
             }
         }
-    }
-}
-
-fn env(args: TokenStream2, item: TokenStream2) -> TokenStream2 {
-    println!("ARGS INPUT: {}", &args);
-    println!("ITEM INPUT: {}", &item);
-
-    let args_ast: ExprLit = syn::parse2(args).unwrap();
-    let item_ast: DeriveInput = syn::parse2(item).unwrap();
-
-    println!("ARGS AST: {:#?}", args_ast);
-    println!("ITEM AST: {:#?}", item_ast);
-
-    let output = generate_env_impl(&args_ast, &item_ast);
-
-    println!("OUTPUT: {}", output);
-
-    TokenStream2::new()
-}
-
-fn generate_env_impl(args: &ExprLit, item: &DeriveInput) -> TokenStream2 {
-    let ident = &item.ident;
-
-    quote! {
-        #item
-
-
     }
 }
 
@@ -202,6 +191,7 @@ mod test {
             model.unwrap(),
             Model {
                 image: "docker.io/library/nginx".to_string(),
+                health_check_command: "curl http://localhost || exit 1".to_string(),
                 env_vars: vec![]
             }
         );
