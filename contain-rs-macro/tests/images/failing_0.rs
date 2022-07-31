@@ -11,7 +11,7 @@ use contain_rs_macro::Container;
     health_check_timeout = 30000
 )]
 #[container()]
-struct SimpleImage {
+struct DeclaredTwice {
     #[env_var("PG_PASSWORD")]
     password: String,
 }

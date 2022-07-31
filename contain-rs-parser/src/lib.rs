@@ -2,7 +2,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
     parse::Parse, punctuated::Punctuated, spanned::Spanned, token::Eq, Attribute, DeriveInput,
-    ExprCall, Lit, Path, Result, Token,
+    ExprCall, Field, Lit, Path, Result, Token,
 };
 
 pub fn container(tokens: TokenStream2) -> TokenStream2 {
@@ -62,24 +62,98 @@ impl Parse for ContainerProperty {
     }
 }
 
+struct FieldProperty {
+    _operator: Eq,
+    value: Lit,
+}
+
+impl Parse for FieldProperty {
+    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+        Ok(Self {
+            _operator: input.parse()?,
+            value: input.parse()?,
+        })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 struct Model {
     image: String,
-    health_check_command: String,
-    env_vars: Vec<(String, String)>,
+    health_check_command: Option<String>,
+    fields: Vec<ModelField>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ModelField {
+    name: String,
+    env_var: Option<String>,
 }
 
 fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
     let attr = get_container_attribute(&ast)?;
     let container_input: ContainerInput = attr.parse_args()?;
+    let image = string_value(find_property(&container_input, "image").unwrap())?;
+    let health_check_command = find_property(&container_input, "health_check_command")
+        .map(string_value)
+        .map_or(Ok(None), |it| it.map(Some))?;
+    let fields = parse_fields(get_fields(ast))?;
 
     Ok(Model {
-        image: string_value(find_property(&container_input, "image").unwrap())?,
-        env_vars: Vec::new(),
-        health_check_command: string_value(
-            find_property(&container_input, "health_check_command").unwrap(),
-        )?,
+        image,
+        health_check_command,
+        fields,
     })
+}
+
+fn parse_fields(input: Vec<Field>) -> Result<Vec<ModelField>> {
+    input.into_iter().map(|field| parse_field(field)).collect()
+}
+
+fn parse_field(field: Field) -> Result<ModelField> {
+    let env_var = find_attr("env_var", field.attrs)
+        .map(|it| it.tokens)
+        .map(parse_attribute_value)
+        .map_or(Ok(None), |it| it.map(Some))?;
+
+    Ok(ModelField {
+        name: field.ident.unwrap().to_string(),
+        env_var,
+    })
+}
+
+fn parse_attribute_value(tokens: TokenStream2) -> Result<String> {
+    let field_property: FieldProperty = syn::parse2(tokens)?;
+
+    match field_property.value {
+        Lit::Str(str) => Ok(str.value()),
+        _ => Err(syn::Error::new_spanned(
+            field_property.value,
+            "Expected String",
+        )),
+    }
+}
+
+fn find_attr<'a>(name: &str, attributes: Vec<Attribute>) -> Option<Attribute> {
+    attributes
+        .into_iter()
+        .find(|attr| match attr.path.get_ident() {
+            Some(ident) => {
+                if ident.to_string().as_str() == name {
+                    true
+                } else {
+                    false
+                }
+            }
+            None => false,
+        })
+}
+
+fn get_fields(input: DeriveInput) -> Vec<Field> {
+    match input.data {
+        syn::Data::Struct(data) => data.fields.into_iter().collect(),
+        syn::Data::Enum(_) => todo!(),
+        syn::Data::Union(_) => todo!(),
+    }
 }
 
 fn find_property<'a>(
@@ -168,7 +242,7 @@ fn generate_into_container(item: &syn::DeriveInput, container_builder: &ExprCall
 mod test {
     use quote::quote;
 
-    use crate::{parse_container, Model};
+    use crate::{parse_container, Model, ModelField};
 
     #[test]
     fn test_parse_container() {
@@ -191,8 +265,11 @@ mod test {
             model.unwrap(),
             Model {
                 image: "docker.io/library/nginx".to_string(),
-                health_check_command: "curl http://localhost || exit 1".to_string(),
-                env_vars: vec![]
+                health_check_command: Some("curl http://localhost || exit 1".to_string()),
+                fields: vec![ModelField {
+                    name: "password".to_string(),
+                    env_var: Some("PASSWORD".to_string())
+                }]
             }
         );
     }
