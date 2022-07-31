@@ -1,10 +1,8 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
-    parse::{Parse, Parser},
-    parse2,
-    spanned::Spanned,
-    Attribute, DeriveInput, ExprAssign, ExprCall, ExprLit, LitStr, PathSegment, Result, Token,
+    parse::Parse, punctuated::Punctuated, spanned::Spanned, token::Eq, Attribute, DeriveInput,
+    ExprCall, ExprLit, Lit, Path, Result, Token,
 };
 
 pub fn container(tokens: TokenStream2) -> TokenStream2 {
@@ -36,30 +34,32 @@ struct ContainerInput {
 
 impl Parse for ContainerInput {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
-        let mut properties: Vec<ContainerProperty> = Vec::new();
+        println!("tokens: {:#?}", input);
 
-        // TODO parse container properties
-        properties.push(input.parse()?);
+        let punctuated: Punctuated<ContainerProperty, Token![,]> =
+            Punctuated::parse_terminated(input)?;
+
+        let properties: Vec<ContainerProperty> = punctuated.into_iter().collect();
 
         Ok(ContainerInput { properties })
     }
 }
 
 struct ContainerProperty {
-    property_type: PropertyType,
-    operator: Token![=],
-    value: LitStr,
+    property_type: Path,
+    _operator: Eq,
+    value: Lit,
 }
 
 impl Parse for ContainerProperty {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
-        input.parse()
+        println!("property: {:?}", input);
+        Ok(Self {
+            property_type: input.parse()?,
+            _operator: input.parse()?,
+            value: input.parse()?,
+        })
     }
-}
-
-enum PropertyType {
-    Image,
-    HealthCheckCommand,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -70,23 +70,30 @@ struct Model {
 
 fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
     let attr = get_container_attribute(&ast)?;
-    // TODO cloning sucks
-    let container_input: ContainerInput = parse2(attr.tokens.clone())?;
+    let container_input: ContainerInput = attr.parse_args()?;
 
-    let image: Vec<String> = container_input
-        .properties
-        .iter()
-        .filter(|prop| match prop.property_type {
-            PropertyType::Image => true,
-            _ => false,
-        })
-        .map(|prop| prop.value.value())
-        .collect();
+    let image: Option<&ContainerProperty> =
+        container_input.properties.iter().find(|prop| {
+            match prop.property_type.get_ident().unwrap().to_string().as_str() {
+                "image" => true,
+                _ => false,
+            }
+        });
 
     Ok(Model {
-        image: image.first().unwrap().to_string(),
+        image: parse_image(image.unwrap())?,
         env_vars: Vec::new(),
     })
+}
+
+fn parse_image(property: &ContainerProperty) -> Result<String> {
+    match &property.value {
+        Lit::Str(str) => Ok(str.value().to_string()),
+        _ => Err(syn::Error::new_spanned(
+            property.value.clone(),
+            "Expected a string for the image name",
+        )),
+    }
 }
 
 fn get_container_attribute<'a>(input: &'a DeriveInput) -> Result<&'a Attribute> {
@@ -184,6 +191,7 @@ mod test {
                 health_check_timeout = 30000
             )]
             struct SimpleImage {
+                #[env_var = "PASSWORD"]
                 password: String,
             }
         };
