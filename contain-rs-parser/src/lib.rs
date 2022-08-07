@@ -2,25 +2,55 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
     parse::Parse, punctuated::Punctuated, spanned::Spanned, token::Eq, Attribute, DeriveInput,
-    ExprCall, Field, Lit, Path, Result, Token,
+    ExprCall, Field, Lit, Path, Result as SynResult, Token,
 };
 
+trait AttribtueInfo {
+    fn name(&self) -> &'static str;
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum FieldAttribute {
+    EnvVar(String),
+}
+
+impl TryFrom<Attribute> for FieldAttribute {
+    type Error = syn::Error;
+
+    fn try_from(value: Attribute) -> Result<Self, Self::Error> {
+        match value.path.get_ident() {
+            Some(ident) => match ident.to_string().as_str() {
+                "env_var" => parse_env_var(value),
+                _ => Err(syn::Error::new_spanned(value, "Expected any of ...")), // TODO
+            },
+            None => Err(syn::Error::new_spanned(value, "Expected identifier")),
+        }
+    }
+}
+
+fn parse_env_var(value: Attribute) -> SynResult<FieldAttribute> {
+    let field_property: FieldProperty = syn::parse2(value.tokens)?;
+
+    match field_property.value {
+        Lit::Str(str) => Ok(FieldAttribute::EnvVar(str.value().to_string())),
+        _ => Err(syn::Error::new_spanned(
+            field_property.value,
+            "Expected string literal",
+        )),
+    }
+}
+
 pub fn container(tokens: TokenStream2) -> TokenStream2 {
-    // println!("ARGS INPUT: {}", &args);
     println!("ITEM INPUT: {}", tokens);
 
     let model = parse_container(tokens);
 
-    // let args_ast: ExprCall = syn::parse(args).unwrap();
-
-    // let result = generate_into_container(&item_ast, &args_ast);
     println!("OUTPUT: {:#?}", model);
 
-    // result
     TokenStream2::new()
 }
 
-fn parse_container(tokens: TokenStream2) -> Result<Model> {
+fn parse_container(tokens: TokenStream2) -> SynResult<Model> {
     let item_ast: DeriveInput = syn::parse2(tokens).unwrap();
 
     println!("ITEM AST: {:#?}", item_ast);
@@ -33,7 +63,7 @@ struct ContainerInput {
 }
 
 impl Parse for ContainerInput {
-    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+    fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
         println!("tokens: {:#?}", input);
 
         let punctuated: Punctuated<ContainerProperty, Token![,]> =
@@ -52,7 +82,7 @@ struct ContainerProperty {
 }
 
 impl Parse for ContainerProperty {
-    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+    fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
         println!("property: {:?}", input);
         Ok(Self {
             property_type: input.parse()?,
@@ -68,7 +98,7 @@ struct FieldProperty {
 }
 
 impl Parse for FieldProperty {
-    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+    fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
         Ok(Self {
             _operator: input.parse()?,
             value: input.parse()?,
@@ -86,10 +116,10 @@ struct Model {
 #[derive(Debug, PartialEq, Eq)]
 struct ModelField {
     name: String,
-    env_var: Option<String>,
+    attributes: Vec<FieldAttribute>,
 }
 
-fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
+fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
     let attr = get_container_attribute(&ast)?;
     let container_input: ContainerInput = attr.parse_args()?;
     let image = string_value(find_property(&container_input, "image").unwrap())?;
@@ -105,23 +135,25 @@ fn parse_derive_input(ast: DeriveInput) -> Result<Model> {
     })
 }
 
-fn parse_fields(input: Vec<Field>) -> Result<Vec<ModelField>> {
+fn parse_fields(input: Vec<Field>) -> SynResult<Vec<ModelField>> {
     input.into_iter().map(|field| parse_field(field)).collect()
 }
 
-fn parse_field(field: Field) -> Result<ModelField> {
-    let env_var = find_attr("env_var", field.attrs)
-        .map(|it| it.tokens)
-        .map(parse_attribute_value)
-        .map_or(Ok(None), |it| it.map(Some))?;
+fn parse_field(field: Field) -> SynResult<ModelField> {
+    let attrs = field
+        .attrs
+        .into_iter()
+        .map(FieldAttribute::try_from)
+        .filter_map(Result::ok)
+        .collect::<Vec<FieldAttribute>>();
 
     Ok(ModelField {
         name: field.ident.unwrap().to_string(),
-        env_var,
+        attributes: attrs,
     })
 }
 
-fn parse_attribute_value(tokens: TokenStream2) -> Result<String> {
+fn parse_attribute_value(tokens: TokenStream2) -> SynResult<String> {
     let field_property: FieldProperty = syn::parse2(tokens)?;
 
     match field_property.value {
@@ -175,7 +207,7 @@ fn find_property<'a>(
         })
 }
 
-fn string_value(property: &ContainerProperty) -> Result<String> {
+fn string_value(property: &ContainerProperty) -> SynResult<String> {
     match &property.value {
         Lit::Str(str) => Ok(str.value().to_string()),
         _ => Err(syn::Error::new_spanned(
@@ -185,7 +217,7 @@ fn string_value(property: &ContainerProperty) -> Result<String> {
     }
 }
 
-fn get_container_attribute<'a>(input: &'a DeriveInput) -> Result<&'a Attribute> {
+fn get_container_attribute<'a>(input: &'a DeriveInput) -> SynResult<&'a Attribute> {
     let attrs = input
         .attrs
         .iter()
@@ -242,7 +274,7 @@ fn generate_into_container(item: &syn::DeriveInput, container_builder: &ExprCall
 mod test {
     use quote::quote;
 
-    use crate::{parse_container, Model, ModelField};
+    use crate::{parse_container, FieldAttribute, Model, ModelField};
 
     #[test]
     fn test_parse_container() {
@@ -268,7 +300,7 @@ mod test {
                 health_check_command: Some("curl http://localhost || exit 1".to_string()),
                 fields: vec![ModelField {
                     name: "password".to_string(),
-                    env_var: Some("PASSWORD".to_string())
+                    attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
                 }]
             }
         );

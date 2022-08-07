@@ -1,0 +1,5 @@
+error: Expected only one container annotation
+  --> tests/images/fail_0.rs:10:1
+   |
+10 | #[container()]
+   | ^^^^^^^^^^^^^^
