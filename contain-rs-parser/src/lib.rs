@@ -40,14 +40,25 @@ fn parse_env_var(value: Attribute) -> SynResult<FieldAttribute> {
     }
 }
 
-pub fn container(tokens: TokenStream2) -> TokenStream2 {
+pub fn container(tokens: TokenStream2) -> SynResult<TokenStream2> {
     println!("ITEM INPUT: {}", tokens);
 
     let model = parse_container(tokens);
 
     println!("OUTPUT: {:#?}", model);
 
-    TokenStream2::new()
+    Ok(generate_impl(model?))
+}
+
+fn generate_impl(model: Model) -> TokenStream2 {
+    let struct_name = model.struct_name;
+    quote! {
+        impl IntoContainer for #struct_name {
+            fn from(value: #struct_name) -> Self {
+                todo!()
+            }
+        }
+    }
 }
 
 fn parse_container(tokens: TokenStream2) -> SynResult<Model> {
@@ -108,6 +119,7 @@ impl Parse for FieldProperty {
 
 #[derive(Debug, PartialEq, Eq)]
 struct Model {
+    struct_name: String,
     image: String,
     health_check_command: Option<String>,
     fields: Vec<ModelField>,
@@ -120,6 +132,7 @@ struct ModelField {
 }
 
 fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
+    let struct_name = ast.ident.to_string();
     let attr = get_container_attribute(&ast)?;
     let container_input: ContainerInput = attr.parse_args()?;
     let image = string_value(find_property(&container_input, "image").unwrap())?;
@@ -129,6 +142,7 @@ fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
     let fields = parse_fields(get_fields(ast))?;
 
     Ok(Model {
+        struct_name,
         image,
         health_check_command,
         fields,
@@ -296,6 +310,7 @@ mod test {
         assert_eq!(
             model.unwrap(),
             Model {
+                struct_name: "SimpleImage".to_string(),
                 image: "docker.io/library/nginx".to_string(),
                 health_check_command: Some("curl http://localhost || exit 1".to_string()),
                 fields: vec![ModelField {
