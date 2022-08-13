@@ -47,15 +47,19 @@ pub fn container(tokens: TokenStream2) -> SynResult<TokenStream2> {
 
     println!("OUTPUT: {:#?}", model);
 
-    Ok(generate_impl(model?))
+    Ok(generate_into_container_impl(model?))
 }
 
-fn generate_impl(model: Model) -> TokenStream2 {
+fn generate_into_container_impl(model: Model) -> TokenStream2 {
     let struct_name = model.struct_name;
+    let image_name = model.image;
+
     quote! {
         impl IntoContainer for #struct_name {
-            fn from(value: #struct_name) -> Self {
-                todo!()
+            fn from(value: #struct_name) -> Container {
+                let image = Image::from_name(#image_name);
+                let container = Container::from_image(image);
+                container
             }
         }
     }
@@ -288,7 +292,7 @@ fn generate_into_container(item: &syn::DeriveInput, container_builder: &ExprCall
 mod test {
     use quote::quote;
 
-    use crate::{parse_container, FieldAttribute, Model, ModelField};
+    use crate::{generate_into_container_impl, parse_container, FieldAttribute, Model, ModelField};
 
     #[test]
     fn test_parse_container() {
@@ -319,5 +323,36 @@ mod test {
                 }]
             }
         );
+    }
+
+    #[test]
+    fn test_generate() {
+        let tokens_in = quote! {
+            #[derive(Default, Container)]
+            #[container(
+                image = "docker.io/library/nginx",
+                health_check_command = "curl http://localhost || exit 1",
+                health_check_timeout = 30000
+            )]
+            struct SimpleImage {
+                #[env_var = "PASSWORD"]
+                password: String,
+            }
+        };
+
+        let model = parse_container(tokens_in).unwrap();
+        let token_stream = generate_into_container_impl(model);
+
+        let expected_tokens = quote! {
+            impl IntoContainer for SimpleImage {
+                fn from(value: SimpleImage) -> Container {
+                    let image = Image::from_name("docker.io/library/nginx");
+                    let container = Container::from_image(image);
+                    container
+                }
+            }
+        };
+
+        assert_ne!(token_stream.to_string(), expected_tokens.to_string());
     }
 }
