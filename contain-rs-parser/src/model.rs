@@ -8,6 +8,7 @@ pub struct Model {
     pub struct_name: String,
     pub image: String,
     pub health_check_command: Option<String>,
+    pub ports: Vec<(u16, u16)>,
     pub fields: Vec<ModelField>,
 }
 
