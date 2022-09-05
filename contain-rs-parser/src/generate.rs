@@ -58,7 +58,7 @@ mod test {
                 image = "docker.io/library/nginx",
                 health_check_command = "curl http://localhost || exit 1",
                 health_check_timeout = 30000,
-                port = 8080:8080
+                ports = [8080:8080]
             )]
             struct SimpleImage {
                 #[env_var = "PASSWORD"]

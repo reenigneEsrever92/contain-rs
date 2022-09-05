@@ -1,10 +1,11 @@
-use proc_macro2::{Ident, Literal, TokenStream};
+use proc_macro2::{Ident, Literal, Span, TokenStream};
 use syn::{
+    bracketed,
     parse::Parse,
     punctuated::Punctuated,
     spanned::Spanned,
     token::{self, parsing::peek_keyword, Eq, Token},
-    Attribute, DeriveInput, Field, Lit, LitStr, Path, Result as SynResult, Token,
+    Attribute, DeriveInput, Field, Generics, Lit, LitInt, LitStr, Path, Result as SynResult, Token,
 };
 
 use crate::model::{FieldAttribute, Model, ModelField};
@@ -41,8 +42,9 @@ impl Parse for ContainerInput {
 
 enum Property {
     HealthCheckCommand(Path, Eq, LitStr),
+    HealthCheckTimeout(Path, Eq, LitInt),
     Image(Path, Eq, LitStr),
-    Ports(Path, Eq, LitStr), // TODO LitStr is not good enough parse to some cutom type
+    Ports(Path, Eq, token::Bracket, Punctuated<LitPort, Token![,]>),
 }
 
 impl Parse for Property {
@@ -55,72 +57,44 @@ impl Parse for Property {
                 input.parse()?,
                 input.parse()?,
             ))
-        } else if peek_keyword(input.cursor(), "health_check_command") {
+        } else if peek_keyword(cursor, "health_check_command") {
             Ok(Property::HealthCheckCommand(
                 input.parse()?,
                 input.parse()?,
                 input.parse()?,
             ))
-        } else if peek_keyword(cursor, "ports") {
-            Ok(Property::Ports(
+        } else if peek_keyword(cursor, "health_check_timeout") {
+            Ok(Property::HealthCheckTimeout(
                 input.parse()?,
                 input.parse()?,
                 input.parse()?,
             ))
+        } else if peek_keyword(cursor, "ports") {
+            let content;
+            Ok(Property::Ports(
+                input.parse()?,
+                input.parse()?,
+                bracketed!(content in input),
+                Punctuated::parse_terminated(&content)?,
+            ))
         } else {
             Err(input.error("Expected any of..."))
         }
-
-        // let container_property: ContainerProperty = input.parse()?;
-
-        // match container_property
-        //     .property_type
-        //     .get_ident()
-        //     .unwrap()
-        //     .to_string()
-        //     .as_str()
-        // {
-        //     "health_check_command" => Ok(Property::HealthCheckCommand(container_property)),
-        //     _ => Err(input.error("Expected any of...")),
-        // }
     }
 }
 
-// impl Parse for HealthCheckCommandToken {
-//     fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
-//         syn::token::parsing::keyword(input, "");
-//         input.parse_(syn::token::Crate
-//         let ident = input.step(|cursor| {
-//             if let Some((span, rest)) = cursor.span() {
-//                 if(ident.to_string().as_str() == "health_check_command") {
-//                     Ok((ident, rest))
-//                 } else {
-//                     Err(cursor.error("expected health_check_command"))
-//                 }
-//             }
-//         })
-//     }
-// }
-
-struct PortMapping {
-    source: String,
-    _seperator: Token!(:),
-    target: Option<String>,
+struct LitPort {
+    source: LitInt,
+    _colon: Token![:],
+    target: LitInt,
 }
 
-struct ContainerProperty {
-    property_type: Path,
-    _operator: Eq,
-    value: Lit,
-}
-
-impl Parse for ContainerProperty {
+impl Parse for LitPort {
     fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
-        println!("property: {:?}", input);
-        Ok(Self {
-            property_type: input.parse()?,
-            _operator: input.parse()?,
-            value: input.parse()?,
+        Ok(LitPort {
+            source: input.parse()?,
+            _colon: input.parse()?,
+            target: input.parse()?,
         })
     }
 }
@@ -203,7 +177,17 @@ fn get_ports(container_input: &ContainerInput) -> Vec<(u16, u16)> {
         .properties
         .iter()
         .find_map(|property| match property {
-            Property::Ports(_, _, _) => None, // TODO
+            Property::Ports(_, _, _, ports) => Some(
+                ports
+                    .iter()
+                    .map(|port| {
+                        (
+                            port.source.base10_parse().unwrap(), // TODO replace unwrap
+                            port.target.base10_parse().unwrap(), // TODO replace unwrap
+                        )
+                    })
+                    .collect(),
+            ),
             _ => None,
         })
         .unwrap_or(Vec::new())
@@ -240,16 +224,6 @@ fn find_property<'a>(
     func: impl FnMut(&&Property) -> bool,
 ) -> Option<&'a Property> {
     container_input.properties.iter().find(func)
-}
-
-fn string_value(property: &ContainerProperty) -> SynResult<String> {
-    match &property.value {
-        Lit::Str(str) => Ok(str.value().to_string()),
-        _ => Err(syn::Error::new_spanned(
-            property.value.clone(),
-            "Expected a string for the image name",
-        )),
-    }
 }
 
 fn get_container_attribute<'a>(input: &'a DeriveInput) -> SynResult<&'a Attribute> {
