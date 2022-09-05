@@ -1,14 +1,14 @@
-use proc_macro2::{Ident, Literal, Span, TokenStream};
+use proc_macro2::TokenStream;
 use syn::{
     bracketed,
     parse::Parse,
     punctuated::Punctuated,
     spanned::Spanned,
-    token::{self, parsing::peek_keyword, Eq, Token},
-    Attribute, DeriveInput, Field, Generics, Lit, LitInt, LitStr, Path, Result as SynResult, Token,
+    token::{self, parsing::peek_keyword, Eq},
+    Attribute, DeriveInput, Field, Lit, LitInt, LitStr, Path, Result as SynResult, Token,
 };
 
-use crate::model::{FieldAttribute, Model, ModelField};
+use crate::model::{FieldAttribute, Model, ModelField, Port};
 
 impl TryFrom<Attribute> for FieldAttribute {
     type Error = syn::Error;
@@ -172,7 +172,7 @@ fn get_image_name(container_input: &ContainerInput) -> Option<String> {
         })
 }
 
-fn get_ports(container_input: &ContainerInput) -> Vec<(u16, u16)> {
+fn get_ports(container_input: &ContainerInput) -> Vec<Port> {
     container_input
         .properties
         .iter()
@@ -181,10 +181,10 @@ fn get_ports(container_input: &ContainerInput) -> Vec<(u16, u16)> {
                 ports
                     .iter()
                     .map(|port| {
-                        (
-                            port.source.base10_parse().unwrap(), // TODO replace unwrap
-                            port.target.base10_parse().unwrap(), // TODO replace unwrap
-                        )
+                        Port {
+                            source: port.source.base10_parse().unwrap(), // TODO replace unwrap
+                            target: port.target.base10_parse().unwrap(), // TODO replace unwrap
+                        }
                     })
                     .collect(),
             ),
@@ -217,13 +217,6 @@ fn get_fields(input: DeriveInput) -> Vec<Field> {
         syn::Data::Enum(_) => todo!(),
         syn::Data::Union(_) => todo!(),
     }
-}
-
-fn find_property<'a>(
-    container_input: &'a ContainerInput,
-    func: impl FnMut(&&Property) -> bool,
-) -> Option<&'a Property> {
-    container_input.properties.iter().find(func)
 }
 
 fn get_container_attribute<'a>(input: &'a DeriveInput) -> SynResult<&'a Attribute> {
@@ -269,7 +262,7 @@ mod test {
     use quote::quote;
 
     use crate::{
-        model::{FieldAttribute, Model, ModelField},
+        model::{FieldAttribute, Model, ModelField, Port},
         parse::parse_container,
     };
 
@@ -297,7 +290,16 @@ mod test {
                 struct_name: "SimpleImage".to_string(),
                 image: "docker.io/library/nginx".to_string(),
                 health_check_command: Some("curl http://localhost || exit 1".to_string()),
-                ports: vec![(8080, 8080), (8081, 8080)],
+                ports: vec![
+                    Port {
+                        source: 8080,
+                        target: 8080
+                    },
+                    Port {
+                        source: 8081,
+                        target: 8080
+                    }
+                ],
                 fields: vec![ModelField {
                     name: "password".to_string(),
                     attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]

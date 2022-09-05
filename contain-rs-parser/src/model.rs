@@ -8,7 +8,7 @@ pub struct Model {
     pub struct_name: String,
     pub image: String,
     pub health_check_command: Option<String>,
-    pub ports: Vec<(u16, u16)>,
+    pub ports: Vec<Port>,
     pub fields: Vec<ModelField>,
 }
 
@@ -16,4 +16,10 @@ pub struct Model {
 pub struct ModelField {
     pub name: String,
     pub attributes: Vec<FieldAttribute>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Port {
+    pub source: u16,
+    pub target: u16,
 }

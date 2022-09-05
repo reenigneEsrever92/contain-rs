@@ -1,12 +1,13 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-use crate::model::{FieldAttribute, Model, ModelField};
+use crate::model::{FieldAttribute, Model, ModelField, Port};
 
 pub fn generate_container(model: Model) -> TokenStream {
     let struct_name = model.struct_name;
     let image_name = model.image;
     let fields = model.fields;
+    let ports = model.ports;
 
     quote! {
         impl IntoContainer for #struct_name {
@@ -14,6 +15,7 @@ pub fn generate_container(model: Model) -> TokenStream {
                 let image = Image::from_name(#image_name);
                 let container = Container::from_image(image);
                 #( #fields )*
+                #( #ports )*
                 container
             }
         }
@@ -25,6 +27,14 @@ impl ToTokens for ModelField {
         let attributes = &self.attributes;
         let field_tokens = generate_field_tokens(self, attributes);
         tokens.extend(quote! { #( #field_tokens )* })
+    }
+}
+
+impl ToTokens for Port {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let source = self.source;
+        let target = self.target;
+        tokens.extend(quote! { container.map_port((#source, #target)); })
     }
 }
 
@@ -58,7 +68,7 @@ mod test {
                 image = "docker.io/library/nginx",
                 health_check_command = "curl http://localhost || exit 1",
                 health_check_timeout = 30000,
-                ports = [8080:8080]
+                ports = [8080:8080, 8081:8080]
             )]
             struct SimpleImage {
                 #[env_var = "PASSWORD"]
@@ -74,6 +84,8 @@ mod test {
                 fn from(value: SimpleImage) -> Container {
                     let image = Image::from_name("docker.io/library/nginx");
                     let container = Container::from_image(image);
+                    container.map_port((8080, 8080));
+                    container.map_port((8081, 8080));
                     container.env_var("PASSWORD", self.password);
                     container
                 }
