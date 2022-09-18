@@ -9,12 +9,7 @@ use syn::Result as SynResult;
 use crate::{generate::generate_container, parse::parse_container};
 
 pub fn container(tokens: TokenStream2) -> SynResult<TokenStream2> {
-    println!("ITEM INPUT: {}", tokens);
-
     let model = parse_container(tokens);
-
-    println!("OUTPUT: {:#?}", model);
-
     Ok(generate_container(model?))
 }
 
@@ -23,7 +18,7 @@ mod test {
     use quote::quote;
 
     use crate::{
-        model::{FieldAttribute, Model, ModelField},
+        model::{FieldAttribute, FieldType, Model, ModelField},
         parse::parse_container,
     };
 
@@ -53,6 +48,7 @@ mod test {
                 ports: Vec::new(),
                 fields: vec![ModelField {
                     name: "password".to_string(),
+                    ty: FieldType::Simple,
                     attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
                 }]
             }

@@ -1,6 +1,6 @@
 use contain_rs::{
     client::{Client, Podman},
-    container::{Container, IntoContainer},
+    container::{Container, Image, IntoContainer},
 };
 use contain_rs_macro::Container;
 

@@ -1,5 +1,5 @@
 use contain_rs::{
-    client::{podman::Podman, Client, Handle, Docker},
+    client::{podman::Podman, Client, Docker, Handle},
     container::{Container, HealthCheck, Image, WaitStrategy},
 };
 use rstest::*;
@@ -17,7 +17,7 @@ fn docker() -> Docker {
 #[rstest]
 #[case::podman_port_exposure(podman(), 8081)]
 #[case::docker_port_exposure(docker(), 8082)]
-fn test_map_exposure(#[case] client: impl Client, #[case] port: i32) {
+fn test_map_exposure(#[case] client: impl Client, #[case] port: u32) {
     let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
         .map_port(port, 80)
         .health_check(HealthCheck::new("curl http://localhost || exit 1"))

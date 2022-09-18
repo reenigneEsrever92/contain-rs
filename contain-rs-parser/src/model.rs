@@ -15,11 +15,18 @@ pub struct Model {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ModelField {
     pub name: String,
+    pub ty: FieldType,
     pub attributes: Vec<FieldAttribute>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub enum FieldType {
+    Simple,
+    Option
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct Port {
-    pub source: u16,
-    pub target: u16,
+    pub source: u32,
+    pub target: u32,
 }

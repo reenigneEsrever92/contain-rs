@@ -14,7 +14,7 @@ use regex::Regex;
 use crate::error::Result;
 
 pub trait TryIntoContainer {
-    fn try_into_container(self) -> Result<Container>; 
+    fn try_into_container(self) -> Result<Container>;
 }
 
 pub trait IntoContainer {
@@ -101,8 +101,8 @@ impl From<&str> for Port {
     }
 }
 
-impl From<i32> for Port {
-    fn from(s: i32) -> Self {
+impl From<u32> for Port {
+    fn from(s: u32) -> Self {
         Self {
             number: s.to_string(),
         }

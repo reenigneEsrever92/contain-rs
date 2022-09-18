@@ -1,4 +1,5 @@
 use proc_macro2::TokenStream;
+use quote::__private::ext::RepToTokensExt;
 use syn::{
     bracketed,
     parse::Parse,
@@ -8,7 +9,7 @@ use syn::{
     Attribute, DeriveInput, Field, Lit, LitInt, LitStr, Path, Result as SynResult, Token,
 };
 
-use crate::model::{FieldAttribute, Model, ModelField, Port};
+use crate::model::{FieldAttribute, FieldType, Model, ModelField, Port};
 
 impl TryFrom<Attribute> for FieldAttribute {
     type Error = syn::Error;
@@ -30,10 +31,7 @@ struct ContainerInput {
 
 impl Parse for ContainerInput {
     fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
-        println!("tokens: {:#?}", input);
-
         let punctuated: Punctuated<Property, Token![,]> = Punctuated::parse_terminated(input)?;
-
         let properties: Vec<Property> = punctuated.into_iter().collect();
 
         Ok(ContainerInput { properties })
@@ -115,9 +113,6 @@ impl Parse for FieldProperty {
 
 pub fn parse_container(tokens: TokenStream) -> SynResult<Model> {
     let item_ast: DeriveInput = syn::parse2(tokens).unwrap();
-
-    println!("ITEM AST: {:#?}", item_ast);
-
     parse_derive_input(item_ast)
 }
 
@@ -125,7 +120,7 @@ fn parse_env_var(value: Attribute) -> SynResult<FieldAttribute> {
     let field_property: FieldProperty = syn::parse2(value.tokens)?;
 
     match field_property.value {
-        Lit::Str(str) => Ok(FieldAttribute::EnvVar(str.value().to_string())),
+        Lit::Str(str) => Ok(FieldAttribute::EnvVar(str.value())),
         _ => Err(syn::Error::new_spanned(
             field_property.value,
             "Expected string literal",
@@ -190,11 +185,11 @@ fn get_ports(container_input: &ContainerInput) -> Vec<Port> {
             ),
             _ => None,
         })
-        .unwrap_or(Vec::new())
+        .unwrap_or_default()
 }
 
 fn parse_fields(input: Vec<Field>) -> SynResult<Vec<ModelField>> {
-    input.into_iter().map(|field| parse_field(field)).collect()
+    input.into_iter().map(parse_field).collect()
 }
 
 fn parse_field(field: Field) -> SynResult<ModelField> {
@@ -205,10 +200,67 @@ fn parse_field(field: Field) -> SynResult<ModelField> {
         .filter_map(Result::ok)
         .collect::<Vec<FieldAttribute>>();
 
+    let ty: FieldType = parse_field_type(field.ty)?;
+
     Ok(ModelField {
         name: field.ident.unwrap().to_string(),
+        ty,
         attributes: attrs,
     })
+}
+
+fn parse_field_type(ty: syn::Type) -> SynResult<FieldType> {
+    match ty {
+        syn::Type::Path(path) => {
+            let ident = (
+                path.path.segments.first(),
+                path.path.segments.first().and_then(|segment| {
+                    segment.arguments.next().and_then(|args| match args {
+                        syn::PathArguments::AngleBracketed(bracketed) => {
+                            match bracketed.args.first() {
+                                Some(syn::GenericArgument::Type(syn::Type::Path(path))) => {
+                                    Some(&path.path)
+                                }
+                                _ => None,
+                            }
+                        }
+                        _ => None,
+                    })
+                }),
+            );
+
+            match ident {
+                (Some(segment), None) => {
+                    if segment.ident == "String" {
+                        Ok(FieldType::Simple)
+                    } else {
+                        Err(syn::Error::new_spanned(
+                            path.path,
+                            "Expected: String or Option<String>",
+                        ))
+                    }
+                }
+                (Some(segment), Some(generic)) => {
+                    if segment.ident == "Option" && generic.is_ident("String") {
+                        Ok(FieldType::Option)
+                    } else {
+                        Err(syn::Error::new_spanned(
+                            path.path,
+                            "Expected: String or Option<String>",
+                        ))
+                    }
+                }
+                _ => Err(syn::Error::new_spanned(
+                    path.path,
+                    "Expected: String or Option<String>",
+                )),
+            }
+        }
+        _ => Err(syn::Error::new_spanned(
+            ty,
+            "Expected: String or Option<String>",
+        )),
+    }
 }
 
 fn get_fields(input: DeriveInput) -> Vec<Field> {
@@ -219,7 +271,7 @@ fn get_fields(input: DeriveInput) -> Vec<Field> {
     }
 }
 
-fn get_container_attribute<'a>(input: &'a DeriveInput) -> SynResult<&'a Attribute> {
+fn get_container_attribute(input: &DeriveInput) -> SynResult<&Attribute> {
     let attrs = input
         .attrs
         .iter()
@@ -227,7 +279,7 @@ fn get_container_attribute<'a>(input: &'a DeriveInput) -> SynResult<&'a Attribut
             attr.path
                 .segments
                 .last()
-                .map(|segment| segment.ident.to_string() == "container")
+                .map(|segment| segment.ident == "container")
                 .unwrap_or(false)
         })
         .fold(None, |left, right| match left {
@@ -262,7 +314,7 @@ mod test {
     use quote::quote;
 
     use crate::{
-        model::{FieldAttribute, Model, ModelField, Port},
+        model::{FieldAttribute, FieldType, Model, ModelField, Port},
         parse::parse_container,
     };
 
@@ -302,6 +354,7 @@ mod test {
                 ],
                 fields: vec![ModelField {
                     name: "password".to_string(),
+                    ty: FieldType::Simple,
                     attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
                 }]
             }

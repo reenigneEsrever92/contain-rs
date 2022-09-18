@@ -3,6 +3,7 @@
 members = [
     "contain-rs",
     "contain-rs-macro",
-    "images/contain-rs-postgres",
     "contain-rs-parser",
+    "images/contain-rs-postgres",
+    "images/contain-rs-nginx",
 ]
