@@ -7,9 +7,14 @@ pub enum FieldAttribute {
 pub struct Model {
     pub struct_name: String,
     pub image: String,
-    pub health_check_command: Option<String>,
+    pub health_check: Option<HealthCheck>,
     pub ports: Vec<Port>,
     pub fields: Vec<ModelField>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum HealthCheck {
+    Command(String),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -22,7 +27,7 @@ pub struct ModelField {
 #[derive(Debug, PartialEq, Eq)]
 pub enum FieldType {
     Simple,
-    Option
+    Option,
 }
 
 #[derive(Debug, PartialEq, Eq)]

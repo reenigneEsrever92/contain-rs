@@ -27,6 +27,12 @@ impl<T: TryIntoContainer> IntoContainer for T {
     }
 }
 
+impl IntoContainer for Container {
+    fn into_container(self) -> Container {
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct HealthCheck {
     pub command: String,
@@ -127,13 +133,13 @@ impl EnvVar {
     }
 }
 
-impl<T, T2> Into<EnvVar> for (T, T2)
+impl<K, V> From<(K, V)> for EnvVar
 where
-    T: Into<String>,
-    T2: Into<String>,
+    K: Into<String>,
+    V: Into<String>,
 {
-    fn into(self) -> EnvVar {
-        EnvVar::new(self.0.into(), self.1.into())
+    fn from(value: (K, V)) -> Self {
+        EnvVar::new(value.0.into(), value.1.into())
     }
 }
 
@@ -221,7 +227,7 @@ impl Container {
     ///
     /// In case no explicit name is defined contain-rs will generate one as the name is being used by the [Client] for interaction.
     ///
-    pub fn name(mut self, name: &str) -> Self {
+    pub fn name(&mut self, name: &str) -> &mut Self {
         self.name = name.into();
         self
     }
@@ -229,7 +235,7 @@ impl Container {
     ///
     /// Map a port from `source` on the host to `target` in the container.
     ///
-    pub fn map_port(mut self, source: impl Into<Port>, target: impl Into<Port>) -> Self {
+    pub fn map_port(&mut self, source: impl Into<Port>, target: impl Into<Port>) -> &mut Self {
         self.port_mappings.push(PortMapping {
             source: source.into(),
             target: target.into(),
@@ -240,7 +246,7 @@ impl Container {
     ///
     /// Define an environment variable for the container.
     ///
-    pub fn env_var(mut self, var: impl Into<EnvVar>) -> Self {
+    pub fn env_var(&mut self, var: impl Into<EnvVar>) -> &mut Self {
         let env_var = var.into();
         self.env_vars.push(env_var);
         self
@@ -249,7 +255,7 @@ impl Container {
     ///
     /// Add a [WaitStrategy] to be used when running the container.
     ///
-    pub fn wait_for(mut self, strategy: WaitStrategy) -> Self {
+    pub fn wait_for(&mut self, strategy: WaitStrategy) -> &mut Self {
         self.wait_strategy = Some(strategy);
         self
     }
@@ -259,7 +265,7 @@ impl Container {
     ///
     /// Contain-rs waits this additional time after the [WaitStrategy] has been concidered successful.
     ///
-    pub fn additional_wait_period(mut self, period: Duration) -> Self {
+    pub fn additional_wait_period(&mut self, period: Duration) -> &mut Self {
         self.additional_wait_period = period;
         self
     }
@@ -269,7 +275,7 @@ impl Container {
     ///
     /// Some images may define healthchecks already, yet you can use this one to define one yourself explicitly.
     ///
-    pub fn health_check(mut self, health_check: HealthCheck) -> Self {
+    pub fn health_check(&mut self, health_check: HealthCheck) -> &mut Self {
         self.health_check = Some(health_check);
         self
     }

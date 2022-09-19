@@ -21,8 +21,9 @@ use super::{
 ///
 /// let client = Podman::new();
 ///
-/// let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
-///     .health_check(HealthCheck::new("curl http://localhost || exit 1"))
+/// let mut container = Container::from_image(Image::from_name("docker.io/library/nginx"));
+///
+/// container.health_check(HealthCheck::new("curl http://localhost || exit 1"))
 ///     .wait_for(WaitStrategy::HealthCheck);
 ///
 /// client.run(&container).unwrap();
@@ -48,6 +49,12 @@ impl Podman {
     }
 }
 
+impl Default for Podman {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Client for Podman {
     type ClientType = Self;
 
@@ -55,10 +62,10 @@ impl Client for Podman {
         self.build_command()
     }
 
-    fn create(&self, container: Container) -> ContainerHandle<Podman> {
+    fn create<C: IntoContainer>(&self, container: C) -> ContainerHandle<Podman> {
         ContainerHandle {
             client: self.to_owned(),
-            container: container,
+            container: container.into_container(),
         }
     }
 

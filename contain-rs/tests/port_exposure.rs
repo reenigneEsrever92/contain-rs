@@ -18,7 +18,9 @@ fn docker() -> Docker {
 #[case::podman_port_exposure(podman(), 8081)]
 #[case::docker_port_exposure(docker(), 8082)]
 fn test_map_exposure(#[case] client: impl Client, #[case] port: u32) {
-    let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
+    let mut container = Container::from_image(Image::from_name("docker.io/library/nginx"));
+
+    container
         .map_port(port, 80)
         .health_check(HealthCheck::new("curl http://localhost || exit 1"))
         .wait_for(WaitStrategy::HealthCheck);

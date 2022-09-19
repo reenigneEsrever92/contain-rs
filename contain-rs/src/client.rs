@@ -9,7 +9,11 @@ use std::{
     process::{Child, Command},
 };
 
-use crate::{container::Container, error::Result, rt::DetailedContainerInfo};
+use crate::{
+    container::{Container, IntoContainer},
+    error::Result,
+    rt::DetailedContainerInfo,
+};
 
 pub mod docker;
 pub mod podman;
@@ -29,7 +33,7 @@ pub trait Client: Clone {
     type ClientType: Client;
 
     fn command(&self) -> Command;
-    fn create(&self, container: Container) -> ContainerHandle<Self::ClientType>;
+    fn create<C: IntoContainer>(&self, container: C) -> ContainerHandle<Self::ClientType>;
     fn run(&self, container: &Container) -> Result<()>;
     fn stop(&self, container: &Container) -> Result<()>;
     fn rm(&self, container: &Container) -> Result<()>;
@@ -70,10 +74,7 @@ impl Drop for Log {
 
 impl Log {
     fn stream(&mut self) -> Option<impl BufRead> {
-        self.child
-            .stdout
-            .take()
-            .map(|stdout| BufReader::new(stdout))
+        self.child.stdout.take().map(BufReader::new)
     }
 }
 

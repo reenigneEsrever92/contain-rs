@@ -1,10 +1,10 @@
 use contain_rs::{
     client::{Client, Podman},
-    container::{Container, Image, IntoContainer},
+    container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy},
 };
-use contain_rs_macro::Container;
+use contain_rs_macro::ContainerImpl;
 
-#[derive(Default, Container)]
+#[derive(Default, ContainerImpl)]
 #[container(
     image = "docker.io/library/nginx",
     health_check_command = "curl http://localhost || exit 1",
@@ -16,7 +16,7 @@ struct SimpleImage {
 }
 
 fn main() {
-    let podman = Podman::new();
+    // let podman = Podman::new();
     // let container = SimpleImage::default().into_container();
 
     // podman.run(&container).unwrap();

@@ -1,6 +1,10 @@
 use std::process::Command;
 
-use crate::{container::Container, error::Result, rt::DetailedContainerInfo};
+use crate::{
+    container::{Container, IntoContainer},
+    error::Result,
+    rt::DetailedContainerInfo,
+};
 
 use super::{
     shared::{
@@ -21,8 +25,9 @@ use super::{
 ///
 /// let client = Docker::new();
 ///
-/// let container = Container::from_image(Image::from_name("docker.io/library/nginx"))
-///     .health_check(HealthCheck::new("curl http://localhost || exit 1"))
+/// let mut container = Container::from_image(Image::from_name("docker.io/library/nginx"));
+///     
+/// container.health_check(HealthCheck::new("curl http://localhost || exit 1"))
 ///     .wait_for(WaitStrategy::HealthCheck);
 ///
 /// client.run(&container).unwrap();
@@ -46,6 +51,12 @@ impl Docker {
     }
 }
 
+impl Default for Docker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Client for Docker {
     type ClientType = Docker;
 
@@ -53,10 +64,10 @@ impl Client for Docker {
         self.build_command()
     }
 
-    fn create(&self, container: Container) -> super::ContainerHandle<Self::ClientType> {
+    fn create<C: IntoContainer>(&self, container: C) -> super::ContainerHandle<Self::ClientType> {
         ContainerHandle {
             client: self.clone(),
-            container,
+            container: container.into_container(),
         }
     }
 

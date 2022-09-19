@@ -6,4 +6,5 @@ members = [
     "contain-rs-parser",
     "images/contain-rs-postgres",
     "images/contain-rs-nginx",
+    "images/contain-rs-surrealdb",
 ]

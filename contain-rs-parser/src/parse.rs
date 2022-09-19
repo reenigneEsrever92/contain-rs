@@ -9,7 +9,7 @@ use syn::{
     Attribute, DeriveInput, Field, Lit, LitInt, LitStr, Path, Result as SynResult, Token,
 };
 
-use crate::model::{FieldAttribute, FieldType, Model, ModelField, Port};
+use crate::model::{FieldAttribute, FieldType, HealthCheck, Model, ModelField, Port};
 
 impl TryFrom<Attribute> for FieldAttribute {
     type Error = syn::Error;
@@ -133,7 +133,7 @@ fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
     let attr = get_container_attribute(&ast)?;
     let container_input: ContainerInput = attr.parse_args()?;
     let image = get_image_name(&container_input).expect("Expected at least an image property");
-    let health_check_command = get_health_check_command(&container_input);
+    let health_check = get_health_check_command(&container_input);
     let ports = get_ports(&container_input);
 
     let fields = parse_fields(get_fields(ast))?;
@@ -141,18 +141,20 @@ fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
     Ok(Model {
         struct_name,
         image,
-        health_check_command,
+        health_check,
         ports,
         fields,
     })
 }
 
-fn get_health_check_command(container_input: &ContainerInput) -> Option<String> {
+fn get_health_check_command(container_input: &ContainerInput) -> Option<HealthCheck> {
     container_input
         .properties
         .iter()
         .find_map(|property| match property {
-            Property::HealthCheckCommand(_, _, command) => Some(command.value()),
+            Property::HealthCheckCommand(_, _, command) => {
+                Some(HealthCheck::Command(command.value()))
+            }
             _ => None,
         })
 }
@@ -314,7 +316,7 @@ mod test {
     use quote::quote;
 
     use crate::{
-        model::{FieldAttribute, FieldType, Model, ModelField, Port},
+        model::{FieldAttribute, FieldType, HealthCheck, Model, ModelField, Port},
         parse::parse_container,
     };
 
@@ -341,7 +343,9 @@ mod test {
             Model {
                 struct_name: "SimpleImage".to_string(),
                 image: "docker.io/library/nginx".to_string(),
-                health_check_command: Some("curl http://localhost || exit 1".to_string()),
+                health_check: Some(HealthCheck::Command(
+                    "curl http://localhost || exit 1".to_string()
+                )),
                 ports: vec![
                     Port {
                         source: 8080,

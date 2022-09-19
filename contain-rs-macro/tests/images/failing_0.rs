@@ -2,9 +2,9 @@ use contain_rs::{
     client::{Client, Podman},
     container::{Container, IntoContainer},
 };
-use contain_rs_macro::Container;
+use contain_rs_macro::ContainerImpl;
 
-#[derive(Default, Container)]
+#[derive(Default, ContainerImpl)]
 #[container(
     image = "docker.io/library/nginx",
     health_check_command = "curl http://localhost || exit 1",

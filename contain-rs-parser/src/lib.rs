@@ -18,7 +18,7 @@ mod test {
     use quote::quote;
 
     use crate::{
-        model::{FieldAttribute, FieldType, Model, ModelField},
+        model::{FieldAttribute, FieldType, HealthCheck, Model, ModelField},
         parse::parse_container,
     };
 
@@ -44,7 +44,9 @@ mod test {
             Model {
                 struct_name: "SimpleImage".to_string(),
                 image: "docker.io/library/nginx".to_string(),
-                health_check_command: Some("curl http://localhost || exit 1".to_string()),
+                health_check: Some(HealthCheck::Command(
+                    "curl http://localhost || exit 1".to_string()
+                )),
                 ports: Vec::new(),
                 fields: vec![ModelField {
                     name: "password".to_string(),

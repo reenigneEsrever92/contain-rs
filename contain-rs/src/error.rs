@@ -56,22 +56,28 @@ impl Context {
     }
 }
 
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 ///
 /// Represents an error.
-/// 
+///
 /// One can use a context to build one of these like this:
-/// 
+///
 /// ```
 /// use contain_rs::error::*;
-/// 
+///
 /// let result: Result<()> = Err(
 ///     Context::new()
 ///         .info("message", "Something unexpected happened")
 ///         .into_error(ErrorType::Unrecoverable)
 /// );
-/// 
+///
 /// ```
-/// 
+///
 #[derive(Debug)]
 pub struct ContainersError {
     pub typ: ErrorType,
