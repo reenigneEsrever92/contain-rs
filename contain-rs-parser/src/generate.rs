@@ -11,10 +11,12 @@ pub fn generate_container(model: Model) -> TokenStream {
     let health_check = model.health_check.iter();
     let command = model.command;
 
+    // TODO generate wait time
+
     quote! {
         impl IntoContainer for #struct_name {
             fn into_container(self) -> Container {
-                let image = Image::from_name(#image_name);
+                let image = Image::from_str(#image_name).unwrap();
                 let mut container = Container::from_image(image);
                 #command
                 #( #fields )*
@@ -105,7 +107,7 @@ mod test {
         let expected_tokens = quote! {
             impl IntoContainer for Nginx {
                 fn into_container(self) -> Container {
-                    let image = Image::from_name("docker.io/library/nginx");
+                    let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);
                     container
                 }
@@ -140,7 +142,7 @@ mod test {
         let expected_tokens = quote! {
             impl IntoContainer for SimpleImage {
                 fn into_container(self) -> Container {
-                    let image = Image::from_name("docker.io/library/nginx");
+                    let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);
                     container.command(vec!["nginx".to_string(), "-g".to_string(), "daemon off;".to_string(),]);
                     container.env_var(("PASSWORD", self.password));

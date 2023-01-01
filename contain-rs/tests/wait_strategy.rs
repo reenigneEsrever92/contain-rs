@@ -20,7 +20,7 @@ fn docker() -> Docker {
 #[case::podman_wait_for_log(podman())]
 #[case::docker_wait_for_log(docker())]
 fn test_wait_for_log(#[case] client: impl Client) {
-    let mut container = Container::from_image(Image::from_name("docker.io/library/nginx"));
+    let mut container = Container::from_image(Image::from_str("docker.io/library/nginx").unwrap());
 
     container.wait_for(WaitStrategy::LogMessage {
         pattern: regex::Regex::from_str("ready for start up").unwrap(),
@@ -38,7 +38,7 @@ fn test_wait_for_log(#[case] client: impl Client) {
 #[case::podman_wait_for_healthcheck(podman())]
 #[case::docker_wait_for_healthcheck(docker())]
 fn test_wait_for_health_check(#[case] client: impl Client) {
-    let mut container = Container::from_image(Image::from_name("docker.io/library/nginx"));
+    let mut container = Container::from_image(Image::from_str("docker.io/library/nginx").unwrap());
 
     container
         .health_check(HealthCheck::new("curl http://localhost || exit 1"))

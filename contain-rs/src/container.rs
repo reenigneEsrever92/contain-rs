@@ -8,10 +8,15 @@
 
 use std::{fmt::Display, time::Duration};
 
+use lazy_static::lazy_static;
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
-use crate::error::ContainerResult;
+use crate::error::{ContainerResult, Context};
+
+lazy_static! {
+    static ref IMAGE_REGEX: Regex = Regex::new("([0-9a-zA-Z./]+)(:([0-9a-zA-Z.]+))?").unwrap();
+}
 
 pub trait TryIntoContainer {
     fn try_into_container(self) -> ContainerResult<Container>;
@@ -87,6 +92,10 @@ pub enum WaitStrategy {
     /// Waits for the container to be healty.
     ///
     HealthCheck,
+    ///
+    /// Wait for some amount of time.
+    ///
+    WaitTime { duration: Duration },
 }
 
 #[derive(Clone)]
@@ -156,8 +165,19 @@ impl Display for Image {
 }
 
 impl Image {
-    pub fn from_name(name: &str) -> Self {
-        Self::from_name_and_tag(name, "latest")
+    pub fn from_str(name: &str) -> ContainerResult<Self> {
+        let caps = IMAGE_REGEX.captures(name);
+
+        if let Some(cap) = caps {
+            Ok(Self::from_name_and_tag(
+                cap.get(1).unwrap().as_str(),
+                cap.get(3).map(|m| m.as_str()).unwrap_or("latest"),
+            ))
+        } else {
+            Err(Context::new()
+                .info("message", &format!("Invalid image name: {name}"))
+                .into_error(crate::error::ErrorType::ContainerError))
+        }
     }
 
     pub fn from_name_and_tag(name: &str, tag: &str) -> Self {

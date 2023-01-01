@@ -53,7 +53,8 @@ mod test {
                     name: "password".to_string(),
                     ty: FieldType::Simple,
                     attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
-                }]
+                }],
+                wait_time: None
             }
         );
     }

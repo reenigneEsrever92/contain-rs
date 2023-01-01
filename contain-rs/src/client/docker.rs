@@ -25,7 +25,7 @@ use super::{
 ///
 /// let client = Docker::new();
 ///
-/// let mut container = Container::from_image(Image::from_name("docker.io/library/nginx"));
+/// let mut container = Container::from_image(Image::from_str("docker.io/library/nginx").unwrap());
 ///     
 /// container.health_check(HealthCheck::new("curl http://localhost || exit 1"))
 ///     .wait_for(WaitStrategy::HealthCheck);

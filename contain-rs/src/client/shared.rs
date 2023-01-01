@@ -214,6 +214,7 @@ pub fn wait_for<C: Client>(client: &C, container: &Container) -> ContainerResult
         Some(strategy) => match strategy {
             WaitStrategy::LogMessage { pattern } => wait_for_log(client, container, pattern),
             WaitStrategy::HealthCheck => wait_for_health_check(client, container),
+            WaitStrategy::WaitTime { duration } => wait_for_time(duration.to_owned()),
         },
         None => Ok(()),
     };
@@ -221,6 +222,11 @@ pub fn wait_for<C: Client>(client: &C, container: &Container) -> ContainerResult
     thread::sleep(container.additional_wait_period);
 
     result
+}
+
+fn wait_for_time(duration: Duration) -> ContainerResult<()> {
+    thread::sleep(duration);
+    Ok(())
 }
 
 fn wait_for_log<C: Client>(

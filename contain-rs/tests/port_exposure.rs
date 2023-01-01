@@ -18,7 +18,7 @@ fn docker() -> Docker {
 #[case::podman_port_exposure(podman(), 8081)]
 #[case::docker_port_exposure(docker(), 8082)]
 fn test_map_exposure(#[case] client: impl Client, #[case] port: u32) {
-    let mut container = Container::from_image(Image::from_name("docker.io/library/nginx"));
+    let mut container = Container::from_image(Image::from_str("docker.io/library/nginx").unwrap());
 
     container
         .map_port(port, 80)

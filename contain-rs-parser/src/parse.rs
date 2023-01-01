@@ -1,3 +1,4 @@
+use contain_rs::container;
 use proc_macro2::TokenStream;
 use quote::__private::ext::RepToTokensExt;
 use syn::{
@@ -9,7 +10,9 @@ use syn::{
     Attribute, DeriveInput, Field, Lit, LitInt, LitStr, Path, Result as SynResult, Token,
 };
 
-use crate::model::{Command, FieldAttribute, FieldType, HealthCheck, Model, ModelField, Port};
+use crate::model::{
+    Command, FieldAttribute, FieldType, HealthCheck, Model, ModelField, Port, WaitTime,
+};
 
 impl TryFrom<Attribute> for FieldAttribute {
     type Error = syn::Error;
@@ -44,6 +47,7 @@ enum Property {
     HealthCheckTimeout(Path, Eq, LitInt),
     Image(Path, Eq, LitStr),
     Ports(Path, Eq, token::Bracket, Punctuated<LitPort, Token![,]>),
+    WaitTime(Path, Eq, LitStr),
 }
 
 impl Parse for Property {
@@ -83,6 +87,12 @@ impl Parse for Property {
                 input.parse()?,
                 bracketed!(content in input),
                 Punctuated::parse_terminated(&content)?,
+            ))
+        } else if peek_keyword(cursor, "wait_time") {
+            Ok(Property::WaitTime(
+                input.parse()?,
+                input.parse()?,
+                input.parse()?,
             ))
         } else {
             Err(input.error("Expected any of: \"image\", \"command\", \"healt_check_command\", \"health_check_timeout\", \"ports\""))
@@ -145,6 +155,7 @@ fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
     let health_check = get_health_check_command(&container_input);
     let ports = get_ports(&container_input);
     let command = get_command(&container_input);
+    let wait_time = get_wait_time(&container_input);
 
     let fields = parse_fields(get_fields(ast))?;
 
@@ -155,7 +166,20 @@ fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
         health_check,
         ports,
         fields,
+        wait_time,
     })
+}
+
+fn get_wait_time(container_input: &ContainerInput) -> Option<WaitTime> {
+    container_input
+        .properties
+        .iter()
+        .find_map(|property| match property {
+            Property::WaitTime(_, _, time) => Some(WaitTime {
+                time: time.value().to_owned(),
+            }),
+            _ => None,
+        })
 }
 
 fn get_command(container_input: &ContainerInput) -> Option<Command> {
@@ -384,7 +408,8 @@ mod test {
                     name: "password".to_string(),
                     ty: FieldType::Simple,
                     attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
-                }]
+                }],
+                wait_time: None
             }
         );
     }
