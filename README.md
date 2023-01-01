@@ -27,7 +27,7 @@ let docker = Docker::new();
 
 let container = Container::from_image(Image::from_name("docker.io/library/nginx"));
 
-let handle = podman.create(container);
+let handle = docker.create(container);
 
 handle.run();
 handle.wait();

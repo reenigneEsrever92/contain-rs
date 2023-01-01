@@ -11,10 +11,10 @@ use std::{fmt::Display, time::Duration};
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
-use crate::error::Result;
+use crate::error::ContainerResult;
 
 pub trait TryIntoContainer {
-    fn try_into_container(self) -> Result<Container>;
+    fn try_into_container(self) -> ContainerResult<Container>;
 }
 
 pub trait IntoContainer {
@@ -45,7 +45,7 @@ pub struct HealthCheck {
 impl HealthCheck {
     pub fn new(command: &str) -> Self {
         Self {
-            command: command.to_string(),
+            command: command.into(),
             retries: None,
             interval: None,
             start_period: None,
@@ -189,6 +189,7 @@ impl From<&Image> for String {
 pub struct Container {
     pub name: String,
     pub image: Image,
+    pub command: Vec<String>,
     pub network: Option<Network>,
     pub port_mappings: Vec<PortMapping>,
     pub env_vars: Vec<EnvVar>,
@@ -213,6 +214,7 @@ impl Container {
         Container {
             name: format!("contain-rs-{}", Self::gen_hash()),
             image,
+            command: Vec::new(),
             network: None,
             port_mappings: Vec::new(),
             env_vars: Vec::new(),
@@ -229,6 +231,14 @@ impl Container {
     ///
     pub fn name(&mut self, name: &str) -> &mut Self {
         self.name = name.into();
+        self
+    }
+
+    ///
+    /// Define an explicit command to run in the container.
+    ///
+    pub fn command(&mut self, command: Vec<String>) -> &mut Self {
+        self.command = command;
         self
     }
 

@@ -11,7 +11,7 @@ use std::{
 
 use crate::{
     container::{Container, IntoContainer},
-    error::Result,
+    error::ContainerResult,
     rt::DetailedContainerInfo,
 };
 
@@ -34,14 +34,14 @@ pub trait Client: Clone {
 
     fn command(&self) -> Command;
     fn create<C: IntoContainer>(&self, container: C) -> ContainerHandle<Self::ClientType>;
-    fn run(&self, container: &Container) -> Result<()>;
-    fn stop(&self, container: &Container) -> Result<()>;
-    fn rm(&self, container: &Container) -> Result<()>;
-    fn log(&self, container: &Container) -> Result<Option<Log>>;
-    fn inspect(&self, container: &Container) -> Result<Option<DetailedContainerInfo>>;
-    fn exists(&self, container: &Container) -> Result<bool>;
-    fn runs(&self, container: &Container) -> Result<bool>;
-    fn wait(&self, container: &Container) -> Result<()>;
+    fn run(&self, container: &Container) -> ContainerResult<()>;
+    fn stop(&self, container: &Container) -> ContainerResult<()>;
+    fn rm(&self, container: &Container) -> ContainerResult<()>;
+    fn log(&self, container: &Container) -> ContainerResult<Option<Log>>;
+    fn inspect(&self, container: &Container) -> ContainerResult<Option<DetailedContainerInfo>>;
+    fn exists(&self, container: &Container) -> ContainerResult<bool>;
+    fn runs(&self, container: &Container) -> ContainerResult<bool>;
+    fn wait(&self, container: &Container) -> ContainerResult<()>;
 }
 
 ///
@@ -51,15 +51,15 @@ pub trait Client: Clone {
 /// The handle automatically stops and removes the container, when it goes out of scope.
 ///
 pub trait Handle {
-    fn run(&self);
-    fn wait(&self);
-    fn run_and_wait(&self);
-    fn stop(&self);
-    fn rm(&self);
-    fn log(&self) -> Option<Log>;
+    fn run(&self) -> ContainerResult<()>;
+    fn wait(&self) -> ContainerResult<()>;
+    fn run_and_wait(&self) -> ContainerResult<()>;
+    fn stop(&self) -> ContainerResult<()>;
+    fn rm(&self) -> ContainerResult<()>;
+    fn log(&self) -> ContainerResult<Option<Log>>;
     fn container(&self) -> &Container;
-    fn is_running(&self) -> bool;
-    fn exists(&self) -> bool;
+    fn is_running(&self) -> ContainerResult<bool>;
+    fn exists(&self) -> ContainerResult<bool>;
 }
 
 pub struct Log {
@@ -84,42 +84,54 @@ pub struct ContainerHandle<T: Client> {
 }
 
 impl<T: Client> Handle for ContainerHandle<T> {
-    fn run(&self) {
-        if !self.is_running() {
-            self.client.run(&self.container).unwrap();
+    fn run(&self) -> ContainerResult<()> {
+        if !self.is_running()? {
+            self.client.run(&self.container)?;
         }
+
+        Ok(())
     }
 
-    fn wait(&self) {
-        if !self.is_running() {
+    fn wait(&self) -> ContainerResult<()> {
+        if !self.is_running()? {
             self.client.wait(&self.container).unwrap();
         }
+
+        Ok(())
     }
 
-    fn run_and_wait(&self) {
-        if !self.is_running() {
-            self.run();
-            self.wait();
+    fn run_and_wait(&self) -> ContainerResult<()> {
+        if !self.is_running()? {
+            self.run()?;
+            self.wait()?;
         }
+
+        Ok(())
     }
 
-    fn stop(&self) {
-        if self.is_running() {
-            self.client.stop(&self.container).unwrap()
+    fn stop(&self) -> ContainerResult<()> {
+        if self.is_running()? {
+            self.client.stop(&self.container)?
         }
+
+        Ok(())
     }
 
-    fn rm(&self) {
-        if self.exists() {
-            self.client.rm(&self.container).unwrap()
+    fn rm(&self) -> ContainerResult<()> {
+        self.stop()?;
+
+        if self.exists()? {
+            self.client.rm(&self.container)?
         }
+
+        Ok(())
     }
 
-    fn log(&self) -> Option<Log> {
-        if self.is_running() {
-            self.client.log(&self.container).unwrap()
+    fn log(&self) -> ContainerResult<Option<Log>> {
+        if self.is_running()? {
+            Ok(self.client.log(&self.container)?)
         } else {
-            None
+            Ok(None)
         }
     }
 
@@ -127,18 +139,17 @@ impl<T: Client> Handle for ContainerHandle<T> {
         &self.container
     }
 
-    fn is_running(&self) -> bool {
-        self.exists() && self.client.runs(&self.container).unwrap()
+    fn is_running(&self) -> ContainerResult<bool> {
+        Ok(self.exists()? && self.client.runs(&self.container)?)
     }
 
-    fn exists(&self) -> bool {
-        self.client.exists(&self.container).unwrap()
+    fn exists(&self) -> ContainerResult<bool> {
+        self.client.exists(&self.container)
     }
 }
 
 impl<T: Client> Drop for ContainerHandle<T> {
     fn drop(&mut self) {
-        self.stop();
-        self.rm();
+        self.rm().unwrap();
     }
 }

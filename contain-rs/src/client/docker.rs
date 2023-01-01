@@ -2,7 +2,7 @@ use std::process::Command;
 
 use crate::{
     container::{Container, IntoContainer},
-    error::Result,
+    error::ContainerResult,
     rt::DetailedContainerInfo,
 };
 
@@ -71,7 +71,7 @@ impl Client for Docker {
         }
     }
 
-    fn run(&self, container: &Container) -> Result<()> {
+    fn run(&self, container: &Container) -> ContainerResult<()> {
         let mut cmd = self.build_command();
 
         build_run_command(&mut cmd, container);
@@ -80,7 +80,7 @@ impl Client for Docker {
         Ok(())
     }
 
-    fn stop(&self, container: &Container) -> Result<()> {
+    fn stop(&self, container: &Container) -> ContainerResult<()> {
         let mut cmd = self.build_command();
 
         build_stop_command(&mut cmd, container);
@@ -89,7 +89,7 @@ impl Client for Docker {
         Ok(())
     }
 
-    fn rm(&self, container: &Container) -> Result<()> {
+    fn rm(&self, container: &Container) -> ContainerResult<()> {
         let mut cmd = self.build_command();
 
         build_rm_command(&mut cmd, container);
@@ -98,7 +98,7 @@ impl Client for Docker {
         Ok(())
     }
 
-    fn log(&self, container: &Container) -> Result<Option<Log>> {
+    fn log(&self, container: &Container) -> ContainerResult<Option<Log>> {
         if self.runs(container)? {
             Ok(Some(do_log(self, container)?))
         } else {
@@ -106,22 +106,22 @@ impl Client for Docker {
         }
     }
 
-    fn inspect(&self, container: &Container) -> Result<Option<DetailedContainerInfo>> {
+    fn inspect(&self, container: &Container) -> ContainerResult<Option<DetailedContainerInfo>> {
         inspect(self, container)
     }
 
-    fn exists(&self, container: &Container) -> Result<bool> {
+    fn exists(&self, container: &Container) -> ContainerResult<bool> {
         Ok(self.inspect(container)?.is_some())
     }
 
-    fn runs(&self, container: &Container) -> Result<bool> {
+    fn runs(&self, container: &Container) -> ContainerResult<bool> {
         match self.inspect(container)? {
             Some(detail) => Ok(detail.state.running),
             None => Ok(false),
         }
     }
 
-    fn wait(&self, container: &Container) -> Result<()> {
+    fn wait(&self, container: &Container) -> ContainerResult<()> {
         wait_for(self, container)
     }
 }

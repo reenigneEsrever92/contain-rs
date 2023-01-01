@@ -42,6 +42,7 @@ mod test {
         assert_eq!(
             model.unwrap(),
             Model {
+                command: None,
                 struct_name: "SimpleImage".to_string(),
                 image: "docker.io/library/nginx".to_string(),
                 health_check: Some(HealthCheck::Command(

@@ -7,9 +7,15 @@ pub enum FieldAttribute {
 pub struct Model {
     pub struct_name: String,
     pub image: String,
+    pub command: Option<Command>,
     pub health_check: Option<HealthCheck>,
     pub ports: Vec<Port>,
     pub fields: Vec<ModelField>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Command {
+    pub args: Vec<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]

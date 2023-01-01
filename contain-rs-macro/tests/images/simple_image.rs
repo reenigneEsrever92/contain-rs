@@ -1,7 +1,4 @@
-use contain_rs::{
-    client::{Client, Podman},
-    container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy},
-};
+use contain_rs::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
 use contain_rs_macro::ContainerImpl;
 
 #[derive(Default, ContainerImpl)]

@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use tracing_error::SpanTrace;
 
-pub type Result<T> = std::result::Result<T, ContainersError>;
+pub type ContainerResult<T> = std::result::Result<T, ContainersError>;
 
 #[derive(Debug)]
 pub enum ErrorType {
@@ -70,7 +70,7 @@ impl Default for Context {
 /// ```
 /// use contain_rs::error::*;
 ///
-/// let result: Result<()> = Err(
+/// let result: ContainerResult<()> = Err(
 ///     Context::new()
 ///         .info("message", "Something unexpected happened")
 ///         .into_error(ErrorType::Unrecoverable)

@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use crate::{container::*, error::Result, rt::DetailedContainerInfo};
+use crate::{container::*, error::ContainerResult, rt::DetailedContainerInfo};
 
 use super::{
     shared::{
@@ -69,7 +69,7 @@ impl Client for Podman {
         }
     }
 
-    fn run(&self, container: &Container) -> Result<()> {
+    fn run(&self, container: &Container) -> ContainerResult<()> {
         let mut command = self.build_command();
 
         build_run_command(&mut command, container);
@@ -78,7 +78,7 @@ impl Client for Podman {
         Ok(())
     }
 
-    fn stop(&self, container: &Container) -> Result<()> {
+    fn stop(&self, container: &Container) -> ContainerResult<()> {
         let mut command = self.build_command();
 
         build_stop_command(&mut command, container);
@@ -87,7 +87,7 @@ impl Client for Podman {
         Ok(())
     }
 
-    fn rm(&self, container: &Container) -> Result<()> {
+    fn rm(&self, container: &Container) -> ContainerResult<()> {
         let mut command = self.build_command();
 
         build_rm_command(&mut command, container);
@@ -96,7 +96,7 @@ impl Client for Podman {
         Ok(())
     }
 
-    fn log(&self, container: &Container) -> Result<Option<Log>> {
+    fn log(&self, container: &Container) -> ContainerResult<Option<Log>> {
         if self.runs(container)? {
             Ok(Some(do_log(self, container)?))
         } else {
@@ -104,22 +104,22 @@ impl Client for Podman {
         }
     }
 
-    fn inspect(&self, container: &Container) -> Result<Option<DetailedContainerInfo>> {
+    fn inspect(&self, container: &Container) -> ContainerResult<Option<DetailedContainerInfo>> {
         inspect(self, container)
     }
 
-    fn exists(&self, container: &Container) -> Result<bool> {
+    fn exists(&self, container: &Container) -> ContainerResult<bool> {
         Ok(self.inspect(container)?.is_some())
     }
 
-    fn runs(&self, container: &Container) -> Result<bool> {
+    fn runs(&self, container: &Container) -> ContainerResult<bool> {
         match self.inspect(container)? {
             Some(detail) => Ok(detail.state.running),
             None => Ok(false),
         }
     }
 
-    fn wait(&self, container: &Container) -> Result<()> {
+    fn wait(&self, container: &Container) -> ContainerResult<()> {
         wait_for(self, container)
     }
 }

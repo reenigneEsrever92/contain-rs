@@ -10,13 +10,13 @@ use regex::Regex;
 
 use crate::{
     container::{Container, WaitStrategy},
-    error::{Context, ErrorType, Result},
+    error::{ContainerResult, Context, ErrorType},
     rt::{ContainerStatus, DetailedContainerInfo},
 };
 
 use super::{Client, Log};
 
-pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<String> {
+pub fn run_and_wait_for_command_infallible(command: &mut Command) -> ContainerResult<String> {
     match run_and_wait_for_command(command) {
         Ok(output) => {
             if let Some(0) = output.status.code() {
@@ -37,7 +37,7 @@ pub fn run_and_wait_for_command_infallible(command: &mut Command) -> Result<Stri
     }
 }
 
-pub fn run_and_wait_for_command(command: &mut Command) -> Result<Output> {
+pub fn run_and_wait_for_command(command: &mut Command) -> ContainerResult<Output> {
     debug!("Run and wait for command: {:?}", command);
 
     let child = command
@@ -78,8 +78,18 @@ pub fn build_run_command<'a>(command: &'a mut Command, container: &Container) ->
     add_export_ports_args(command, container);
     add_health_check_args(command, container);
     add_image_arg(command, container);
+    add_command_arg(command, container);
 
     command
+}
+
+fn add_command_arg<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
+    let folded = container
+        .command
+        .iter()
+        .fold(command, |c: &mut std::process::Command, arg| c.arg(arg));
+
+    folded
 }
 
 fn add_name_arg<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
@@ -140,7 +150,7 @@ fn add_export_ports_args(command: &mut Command, container: &Container) {
 pub fn inspect<C: Client>(
     client: &C,
     container: &Container,
-) -> Result<Option<DetailedContainerInfo>> {
+) -> ContainerResult<Option<DetailedContainerInfo>> {
     let mut cmd = client.command();
 
     build_inspect_command(&mut cmd, container);
@@ -161,7 +171,10 @@ pub fn inspect<C: Client>(
                         .into_error(ErrorType::JsonError)
                 })?;
 
-            debug!("Inspect json: {}", serde_json::to_string_pretty(&container_infos).unwrap());
+            debug!(
+                "Inspect json: {}",
+                serde_json::to_string_pretty(&container_infos).unwrap()
+            );
 
             match container_infos.get(0) {
                 Some(info) => Ok(Some(info.to_owned())),
@@ -182,7 +195,7 @@ pub fn inspect<C: Client>(
     }
 }
 
-pub fn do_log<C: Client>(client: &C, container: &Container) -> Result<Log> {
+pub fn do_log<C: Client>(client: &C, container: &Container) -> ContainerResult<Log> {
     let mut cmd = client.command();
 
     build_log_command(&mut cmd, container);
@@ -196,7 +209,7 @@ pub fn do_log<C: Client>(client: &C, container: &Container) -> Result<Log> {
     }
 }
 
-pub fn wait_for<C: Client>(client: &C, container: &Container) -> Result<()> {
+pub fn wait_for<C: Client>(client: &C, container: &Container) -> ContainerResult<()> {
     let result = match &container.wait_strategy {
         Some(strategy) => match strategy {
             WaitStrategy::LogMessage { pattern } => wait_for_log(client, container, pattern),
@@ -210,7 +223,11 @@ pub fn wait_for<C: Client>(client: &C, container: &Container) -> Result<()> {
     result
 }
 
-fn wait_for_log<C: Client>(client: &C, container: &Container, pattern: &Regex) -> Result<()> {
+fn wait_for_log<C: Client>(
+    client: &C,
+    container: &Container,
+    pattern: &Regex,
+) -> ContainerResult<()> {
     match do_log(client, container) {
         Ok(log) => do_wait_for_log(pattern, log),
         Err(e) => Err(Context::new()
@@ -220,29 +237,26 @@ fn wait_for_log<C: Client>(client: &C, container: &Container, pattern: &Regex) -
     }
 }
 
-fn do_wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
-    match log.stream() {
-        Some(read) => {
-            for line in read.lines() {
-                match line {
-                    Ok(line) => {
-                        debug!("Searching for LogMessage pattern: {pattern}, in: {line}");
-                        if pattern.is_match(&line) {
-                            debug!("Found pattern in line: {line}");
-                            // wait a little after reading the log message just to be sure the container really is ready
-                            return Ok(());
-                        }
+fn do_wait_for_log(pattern: &Regex, mut log: Log) -> ContainerResult<()> {
+    if let Some(read) = log.stream() {
+        for line in read.lines() {
+            match line {
+                Ok(line) => {
+                    debug!("Searching for LogMessage pattern: {pattern}, in: {line}");
+                    if pattern.is_match(&line) {
+                        debug!("Found pattern in line: {line}");
+                        // wait a little after reading the log message just to be sure the container really is ready
+                        return Ok(());
                     }
-                    Err(e) => {
-                        return Err(Context::new()
-                            .source(e)
-                            .info("reason", "Could not read from log")
-                            .into_error(ErrorType::LogError))
-                    }
+                }
+                Err(e) => {
+                    return Err(Context::new()
+                        .source(e)
+                        .info("reason", "Could not read from log")
+                        .into_error(ErrorType::LogError))
                 }
             }
         }
-        None => {}
     }
 
     Err(Context::new()
@@ -253,7 +267,7 @@ fn do_wait_for_log(pattern: &Regex, mut log: Log) -> Result<()> {
         .into_error(ErrorType::WaitError))
 }
 
-fn wait_for_health_check<C: Client>(client: &C, container: &Container) -> Result<()> {
+fn wait_for_health_check<C: Client>(client: &C, container: &Container) -> ContainerResult<()> {
     loop {
         debug!("Checking health for {}", &container.name);
 

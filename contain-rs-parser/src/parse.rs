@@ -9,7 +9,7 @@ use syn::{
     Attribute, DeriveInput, Field, Lit, LitInt, LitStr, Path, Result as SynResult, Token,
 };
 
-use crate::model::{FieldAttribute, FieldType, HealthCheck, Model, ModelField, Port};
+use crate::model::{Command, FieldAttribute, FieldType, HealthCheck, Model, ModelField, Port};
 
 impl TryFrom<Attribute> for FieldAttribute {
     type Error = syn::Error;
@@ -39,6 +39,7 @@ impl Parse for ContainerInput {
 }
 
 enum Property {
+    Command(Path, Eq, token::Bracket, Punctuated<LitStr, Token![,]>),
     HealthCheckCommand(Path, Eq, LitStr),
     HealthCheckTimeout(Path, Eq, LitInt),
     Image(Path, Eq, LitStr),
@@ -75,8 +76,16 @@ impl Parse for Property {
                 bracketed!(content in input),
                 Punctuated::parse_terminated(&content)?,
             ))
+        } else if peek_keyword(cursor, "command") {
+            let content;
+            Ok(Property::Command(
+                input.parse()?,
+                input.parse()?,
+                bracketed!(content in input),
+                Punctuated::parse_terminated(&content)?,
+            ))
         } else {
-            Err(input.error("Expected any of..."))
+            Err(input.error("Expected any of: \"image\", \"command\", \"healt_check_command\", \"health_check_timeout\", \"ports\""))
         }
     }
 }
@@ -135,16 +144,30 @@ fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
     let image = get_image_name(&container_input).expect("Expected at least an image property");
     let health_check = get_health_check_command(&container_input);
     let ports = get_ports(&container_input);
+    let command = get_command(&container_input);
 
     let fields = parse_fields(get_fields(ast))?;
 
     Ok(Model {
+        command,
         struct_name,
         image,
         health_check,
         ports,
         fields,
     })
+}
+
+fn get_command(container_input: &ContainerInput) -> Option<Command> {
+    container_input
+        .properties
+        .iter()
+        .find_map(|property| match property {
+            Property::Command(_, _, _, args) => Some(Command {
+                args: args.iter().map(|lit| lit.value()).collect(),
+            }),
+            _ => None,
+        })
 }
 
 fn get_health_check_command(container_input: &ContainerInput) -> Option<HealthCheck> {
@@ -341,6 +364,7 @@ mod test {
         assert_eq!(
             model.unwrap(),
             Model {
+                command: None,
                 struct_name: "SimpleImage".to_string(),
                 image: "docker.io/library/nginx".to_string(),
                 health_check: Some(HealthCheck::Command(
