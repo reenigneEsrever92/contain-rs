@@ -1,5 +1,6 @@
 use contain_rs::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
 use contain_rs_macro::ContainerImpl;
+use std::str::FromStr;
 
 #[derive(ContainerImpl, Default)]
 #[container(image = "docker.io/library/nginx", health_check_command = "curl http://localhost || exit 1", ports = [8080:80])]
@@ -17,8 +18,8 @@ mod test {
 
         let container = client.create(Nginx::default());
 
-        container.run();
-        container.wait();
+        container.run().unwrap();
+        container.wait().unwrap();
 
         let request = reqwest::blocking::get("http://localhost:8080").unwrap();
 

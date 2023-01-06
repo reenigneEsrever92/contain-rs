@@ -1,5 +1,6 @@
 use contain_rs::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
 use contain_rs_macro::ContainerImpl;
+use std::str::FromStr;
 
 #[derive(Default, ContainerImpl)]
 #[container(

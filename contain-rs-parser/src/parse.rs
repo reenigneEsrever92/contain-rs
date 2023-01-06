@@ -1,4 +1,3 @@
-use contain_rs::container;
 use proc_macro2::TokenStream;
 use quote::__private::ext::RepToTokensExt;
 use syn::{
@@ -175,9 +174,7 @@ fn get_wait_time(container_input: &ContainerInput) -> Option<WaitTime> {
         .properties
         .iter()
         .find_map(|property| match property {
-            Property::WaitTime(_, _, time) => Some(WaitTime {
-                time: time.value().to_owned(),
-            }),
+            Property::WaitTime(_, _, time) => Some(WaitTime { time: time.value() }),
             _ => None,
         })
 }

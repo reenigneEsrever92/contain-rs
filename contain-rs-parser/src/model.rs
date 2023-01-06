@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum FieldAttribute {
     EnvVar(String),
@@ -26,7 +28,7 @@ pub enum HealthCheck {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct WaitTime {
-    pub time: String,
+    pub time: Duration,
 }
 
 #[derive(Debug, PartialEq, Eq)]

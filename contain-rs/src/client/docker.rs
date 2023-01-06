@@ -22,6 +22,7 @@ use super::{
 ///     client::{docker::Docker, Client, Handle},
 ///     container::{Container, Image, HealthCheck, WaitStrategy},
 /// };
+/// use std::str::FromStr;
 ///
 /// let client = Docker::new();
 ///

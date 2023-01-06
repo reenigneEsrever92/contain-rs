@@ -4,6 +4,8 @@ use contain_rs::{
 };
 use rstest::*;
 
+use std::str::FromStr;
+
 #[fixture]
 fn podman() -> Podman {
     Podman::new()
@@ -27,12 +29,12 @@ fn test_map_exposure(#[case] client: impl Client, #[case] port: u32) {
 
     let handle = client.create(container);
 
-    handle.run();
-    handle.wait();
+    handle.run().unwrap();
+    handle.wait().unwrap();
 
     let response = reqwest::blocking::get(format!("http://localhost:{}", port)).unwrap();
 
     assert!(response.status().is_success());
 
-    handle.stop();
+    handle.stop().unwrap();
 }

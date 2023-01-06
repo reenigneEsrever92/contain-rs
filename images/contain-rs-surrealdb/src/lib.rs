@@ -1,6 +1,7 @@
 use contain_rs_macro::ContainerImpl;
 
 use contain_rs::container::{Container, Image, IntoContainer};
+use std::str::FromStr;
 
 #[derive(ContainerImpl)]
 #[container(image = "docker.io/surrealdb/surrealdb:latest", command = ["start"], wait_time = "2s" )]
@@ -8,8 +9,6 @@ struct SurrealDB;
 
 #[cfg(test)]
 mod test {
-    use std::{thread, time::Duration};
-
     use contain_rs::client::{Client, Docker, Handle};
 
     use crate::SurrealDB;

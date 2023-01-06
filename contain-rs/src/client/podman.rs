@@ -18,6 +18,7 @@ use super::{
 ///     client::{podman::Podman, Client, Handle},
 ///     container::{Container, Image, HealthCheck, WaitStrategy},
 /// };
+/// use std::str::FromStr;
 ///
 /// let client = Podman::new();
 ///

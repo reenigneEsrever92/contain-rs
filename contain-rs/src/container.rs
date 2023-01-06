@@ -6,13 +6,13 @@
 //! See [Container] for further information on containers.
 //!
 
-use std::{fmt::Display, time::Duration};
+use std::{fmt::Display, str::FromStr, time::Duration};
 
 use lazy_static::lazy_static;
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
-use crate::error::{ContainerResult, Context};
+use crate::error::{ContainerResult, ContainersError, Context};
 
 lazy_static! {
     static ref IMAGE_REGEX: Regex = Regex::new("([0-9a-zA-Z./]+)(:([0-9a-zA-Z.]+))?").unwrap();
@@ -165,8 +165,19 @@ impl Display for Image {
 }
 
 impl Image {
-    pub fn from_str(name: &str) -> ContainerResult<Self> {
-        let caps = IMAGE_REGEX.captures(name);
+    pub fn from_name_and_tag(name: &str, tag: &str) -> Self {
+        Image {
+            name: name.to_string(),
+            tag: tag.to_string(),
+        }
+    }
+}
+
+impl FromStr for Image {
+    type Err = ContainersError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let caps = IMAGE_REGEX.captures(s);
 
         if let Some(cap) = caps {
             Ok(Self::from_name_and_tag(
@@ -175,15 +186,8 @@ impl Image {
             ))
         } else {
             Err(Context::new()
-                .info("message", &format!("Invalid image name: {name}"))
+                .info("message", &format!("Invalid image name: {s}"))
                 .into_error(crate::error::ErrorType::ContainerError))
-        }
-    }
-
-    pub fn from_name_and_tag(name: &str, tag: &str) -> Self {
-        Image {
-            name: name.to_string(),
-            tag: tag.to_string(),
         }
     }
 }

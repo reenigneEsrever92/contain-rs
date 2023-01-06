@@ -10,6 +10,7 @@
 //!     client::{podman::Podman, Client, Handle},
 //!     container::{Container, Image},
 //! };
+//! use std::str::FromStr;
 //!
 //! let podman = Podman::new();
 //!
