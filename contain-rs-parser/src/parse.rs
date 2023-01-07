@@ -1,4 +1,6 @@
-use proc_macro2::TokenStream;
+use std::time::Duration;
+
+use proc_macro2::{Literal, TokenStream};
 use quote::__private::ext::RepToTokensExt;
 use syn::{
     bracketed,
@@ -46,7 +48,7 @@ enum Property {
     HealthCheckTimeout(Path, Eq, LitInt),
     Image(Path, Eq, LitStr),
     Ports(Path, Eq, token::Bracket, Punctuated<LitPort, Token![,]>),
-    WaitTime(Path, Eq, LitStr),
+    WaitTime(Path, Eq, LitDuration),
 }
 
 impl Parse for Property {
@@ -117,10 +119,46 @@ impl Parse for LitPort {
 
 struct LitDuration {
     value: LitInt,
-    unit: LitStr,
+    unit: TimeUnit,
 }
 
-impl Parse for LitDuration {}
+impl Parse for LitDuration {
+    fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
+        println!("Input: {input:?}");
+
+        let value: Literal = input.parse()?;
+        let span = value.span();
+        let other = span.end().column - 1;
+
+        let unit = value.subspan((other..span.end().column).into()).unwrap();
+        println!("Value: {value:?}");
+
+        let unit = input.parse()?;
+
+        // Ok(Self { value, unit })
+    }
+}
+
+enum TimeUnit {
+    Seconds,
+    Millis,
+}
+
+impl Parse for TimeUnit {
+    fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
+        let cursor = input.cursor();
+
+        println!("Input: {input:?}");
+
+        if peek_keyword(cursor, "s") || peek_keyword(cursor, "S") {
+            Ok(TimeUnit::Seconds)
+        } else if peek_keyword(cursor, "m") || peek_keyword(cursor, "M") {
+            Ok(TimeUnit::Millis)
+        } else {
+            Err(input.error("Expected any of: s, m"))
+        }
+    }
+}
 
 struct FieldProperty {
     _operator: Eq,
@@ -161,7 +199,7 @@ fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
     let health_check = get_health_check_command(&container_input);
     let ports = get_ports(&container_input);
     let command = get_command(&container_input);
-    let wait_time = get_wait_time(&container_input);
+    let wait_time = get_wait_time(&container_input)?;
 
     let fields = parse_fields(get_fields(ast))?;
 
@@ -176,14 +214,19 @@ fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {
     })
 }
 
-fn get_wait_time(container_input: &ContainerInput) -> Option<WaitTime> {
+fn get_wait_time(container_input: &ContainerInput) -> SynResult<Option<WaitTime>> {
     container_input
         .properties
         .iter()
         .find_map(|property| match property {
-            Property::WaitTime(_, _, time) => Some(WaitTime { time: time.value() }),
+            Property::WaitTime(_, _, duration) => {
+                Some(duration.value.base10_parse().map(|duration| WaitTime {
+                    time: Duration::from_secs(duration),
+                }))
+            }
             _ => None,
         })
+        .map_or(Ok(None), |v| v.map(Some))
 }
 
 fn get_command(container_input: &ContainerInput) -> Option<Command> {
@@ -364,10 +407,12 @@ fn get_container_attribute(input: &DeriveInput) -> SynResult<&Attribute> {
 
 #[cfg(test)]
 mod test {
+    use std::time::Duration;
+
     use quote::quote;
 
     use crate::{
-        model::{FieldAttribute, FieldType, HealthCheck, Model, ModelField, Port},
+        model::{FieldAttribute, FieldType, HealthCheck, Model, ModelField, Port, WaitTime},
         parse::parse_container,
     };
 
@@ -379,6 +424,7 @@ mod test {
                 image = "docker.io/library/nginx",
                 health_check_command = "curl http://localhost || exit 1",
                 health_check_timeout = 30000,
+                wait_time = 2s,
                 ports = [8080:8080, 8081:8080]
             )]
             struct SimpleImage {
@@ -413,7 +459,9 @@ mod test {
                     ty: FieldType::Simple,
                     attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
                 }],
-                wait_time: None
+                wait_time: Some(WaitTime {
+                    time: Duration::from_secs(2)
+                })
             }
         );
     }

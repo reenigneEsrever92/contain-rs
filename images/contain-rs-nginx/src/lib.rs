@@ -1,5 +1,5 @@
-use contain_rs::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
 use contain_rs_macro::ContainerImpl;
+use contain_rs_rt::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
 use std::str::FromStr;
 
 #[derive(ContainerImpl, Default)]
@@ -8,7 +8,7 @@ struct Nginx;
 
 #[cfg(test)]
 mod test {
-    use contain_rs::client::{Client, Handle, Podman};
+    use contain_rs_rt::client::{Client, Handle, Podman};
 
     use crate::Nginx;
 

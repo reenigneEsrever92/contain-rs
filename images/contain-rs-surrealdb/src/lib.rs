@@ -1,6 +1,6 @@
 use contain_rs_macro::ContainerImpl;
 
-use contain_rs::container::{Container, Image, IntoContainer};
+use contain_rs_rt::container::{Container, Image, IntoContainer};
 use std::str::FromStr;
 
 #[derive(ContainerImpl)]
@@ -9,7 +9,7 @@ struct SurrealDB;
 
 #[cfg(test)]
 mod test {
-    use contain_rs::client::{Client, Docker, Handle};
+    use contain_rs_rt::client::{Client, Docker, Handle};
 
     use crate::SurrealDB;
 

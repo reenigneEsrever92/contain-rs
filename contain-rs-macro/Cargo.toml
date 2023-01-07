@@ -2,20 +2,13 @@
 name = "contain-rs-macro"
 version = "0.2.0"
 edition = "2021"
-license = "MIT"
-description = "contain-rs image macro"
-repository = "https://github.com/reenigneEsrever92/contain-rs"
-documentation = "https://docs.rs/contain-rs"
-readme = "README.md"
-categories = ["development-tools::testing"]
 
 [lib]
 proc-macro = true
 
 [dependencies]
-contain-rs = { path = "../contain-rs" }
 contain-rs-parser = { path = "../contain-rs-parser" }
-syn = { version = "1.0", features = ["full" ,"extra-traits"] }
+syn = { version = "1.0", features = ["full", "extra-traits"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 

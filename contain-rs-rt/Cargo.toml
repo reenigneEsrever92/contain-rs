@@ -1,0 +1,25 @@
+[package]
+name = "contain-rs-rt"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+description = "Run containers with podman (or docker)"
+repository = "https://github.com/reenigneEsrever92/contain-rs"
+documentation = "https://docs.rs/contain-rs"
+readme = "README.md"
+categories = ["development-tools::testing"]
+
+[dependencies]
+rand = "0.8"
+log = "0.4"
+regex = "1.5"
+lazy_static = "1.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing-error = "0.2"
+pretty_env_logger = "0.4"
+
+[dev-dependencies]
+reqwest = { version = "0.11", features = ["blocking"] }
+rstest = "0.16"
+test-log = "0.2"
