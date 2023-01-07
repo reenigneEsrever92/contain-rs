@@ -1,10 +1,11 @@
 use contain_rs_macro::ContainerImpl;
 
-use contain_rs_rt::container::{Container, Image, IntoContainer};
+use contain_rs_rt::container::{Container, Image, IntoContainer, WaitStrategy};
 use std::str::FromStr;
+use std::time::Duration;
 
 #[derive(ContainerImpl)]
-#[container(image = "docker.io/surrealdb/surrealdb:latest", command = ["start"], wait_time = "2s" )]
+#[container(image = "docker.io/surrealdb/surrealdb:latest", command = ["start"], wait_time = 2000 )]
 struct SurrealDB;
 
 #[cfg(test)]

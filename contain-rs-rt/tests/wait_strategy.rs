@@ -1,4 +1,4 @@
-use contain_rs::{
+use contain_rs_rt::{
     client::{podman::Podman, Client, Docker},
     container::{Container, HealthCheck, Image, WaitStrategy},
 };

@@ -38,16 +38,16 @@ impl ToTokens for WaitLog {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let log_message = &self.message;
         tokens.extend(quote! {
-            container.wait_strategy(WaitStrategy::LogMessage { pattern: Regex::new(#log_message).unwrap() });
+            container.wait_for(WaitStrategy::LogMessage { pattern: Regex::new(#log_message).unwrap() });
         })
     }
 }
 
 impl ToTokens for WaitTime {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let millis = self.time.as_millis();
+        let millis = self.time.as_millis() as u64;
         tokens.extend(quote! {
-            container.wait_strategy(WaitStrategy::WaitTime { duration: Duration::from_millis(#millis) });
+            container.wait_for(WaitStrategy::WaitTime { duration: Duration::from_millis(#millis) });
         })
     }
 }
@@ -177,8 +177,8 @@ mod test {
                     container.map_port(8081u32, 8080u32);
                     container.health_check(HealthCheck::new("curl http://localhost || exit 1"))
                         .wait_for(WaitStrategy::HealthCheck);
-                    container.wait_strategy(WaitStrategy::WaitTime { duration: Duration::from_millis(1000u128) });
-                    container.wait_strategy(WaitStrategy::LogMessage { pattern: Regex::new("test").unwrap() })
+                    container.wait_for(WaitStrategy::WaitTime { duration: Duration::from_millis(1000u64) });
+                    container.wait_for(WaitStrategy::LogMessage { pattern: Regex::new("test").unwrap() });
                     container
                 }
             }
