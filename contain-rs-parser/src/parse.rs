@@ -115,6 +115,13 @@ impl Parse for LitPort {
     }
 }
 
+struct LitDuration {
+    value: LitInt,
+    unit: LitStr,
+}
+
+impl Parse for LitDuration {}
+
 struct FieldProperty {
     _operator: Eq,
     value: Lit,
