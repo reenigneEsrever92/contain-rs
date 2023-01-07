@@ -54,7 +54,8 @@ mod test {
                     ty: FieldType::Simple,
                     attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
                 }],
-                wait_time: None
+                wait_time: None,
+                wait_log: None,
             }
         );
     }

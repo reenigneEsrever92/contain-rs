@@ -1,7 +1,9 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 
-use crate::model::{Command, FieldAttribute, HealthCheck, Model, ModelField, Port};
+use crate::model::{
+    Command, FieldAttribute, HealthCheck, Model, ModelField, Port, WaitLog, WaitTime,
+};
 
 pub fn generate_container(model: Model) -> TokenStream {
     let struct_name = format_ident!("{}", model.struct_name);
@@ -10,6 +12,8 @@ pub fn generate_container(model: Model) -> TokenStream {
     let ports = model.ports;
     let health_check = model.health_check.iter();
     let command = model.command;
+    let wait_time = model.wait_time;
+    let wait_log = model.wait_log;
 
     // TODO generate wait time
 
@@ -22,9 +26,29 @@ pub fn generate_container(model: Model) -> TokenStream {
                 #( #fields )*
                 #( #ports )*
                 #( #health_check )*
+                #wait_time
+                #wait_log
                 container
             }
         }
+    }
+}
+
+impl ToTokens for WaitLog {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let log_message = &self.message;
+        tokens.extend(quote! {
+            container.wait_strategy(WaitStrategy::LogMessage { pattern: Regex::new(#log_message).unwrap() });
+        })
+    }
+}
+
+impl ToTokens for WaitTime {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let millis = self.time.as_millis();
+        tokens.extend(quote! {
+            container.wait_strategy(WaitStrategy::WaitTime { duration: Duration::from_millis(#millis) });
+        })
     }
 }
 
@@ -126,7 +150,9 @@ mod test {
                 command = ["nginx", "-g", "daemon off;"],
                 health_check_command = "curl http://localhost || exit 1",
                 health_check_timeout = 30000,
-                ports = [8080:8080, 8081:8080]
+                ports = [8080:8080, 8081:8080],
+                wait_time = 1000,
+                wait_log = "test"
             )]
             struct SimpleImage {
                 #[env_var = "PASSWORD"]
@@ -151,6 +177,8 @@ mod test {
                     container.map_port(8081u32, 8080u32);
                     container.health_check(HealthCheck::new("curl http://localhost || exit 1"))
                         .wait_for(WaitStrategy::HealthCheck);
+                    container.wait_strategy(WaitStrategy::WaitTime { duration: Duration::from_millis(1000u128) });
+                    container.wait_strategy(WaitStrategy::LogMessage { pattern: Regex::new("test").unwrap() })
                     container
                 }
             }

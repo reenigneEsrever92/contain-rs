@@ -12,6 +12,7 @@ pub struct Model {
     pub command: Option<Command>,
     pub health_check: Option<HealthCheck>,
     pub wait_time: Option<WaitTime>,
+    pub wait_log: Option<WaitLog>,
     pub ports: Vec<Port>,
     pub fields: Vec<ModelField>,
 }
@@ -29,6 +30,11 @@ pub enum HealthCheck {
 #[derive(Debug, PartialEq, Eq)]
 pub struct WaitTime {
     pub time: Duration,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct WaitLog {
+    pub message: String,
 }
 
 #[derive(Debug, PartialEq, Eq)]
