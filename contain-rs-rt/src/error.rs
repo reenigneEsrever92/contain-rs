@@ -68,7 +68,7 @@ impl Default for Context {
 /// One can use a context to build one of these like this:
 ///
 /// ```
-/// use contain_rs::error::*;
+/// use contain_rs_rt::error::*;
 ///
 /// let result: ContainerResult<()> = Err(
 ///     Context::new()

@@ -27,7 +27,7 @@ pub struct HealthCheck {
 /// Health status of a container.
 ///
 /// ```
-/// use contain_rs::rt::ContainerStatus;
+/// use contain_rs_rt::rt::ContainerStatus;
 ///
 /// assert_eq!(serde_json::from_str::<ContainerStatus>("\"starting\"").unwrap(), ContainerStatus::Starting);
 /// assert_eq!(serde_json::from_str::<ContainerStatus>("\"\"").unwrap(), ContainerStatus::Empty);

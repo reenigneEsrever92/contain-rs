@@ -6,7 +6,7 @@
 //! # Basic usage
 //!
 //! ```
-//! use contain_rs::{
+//! use contain_rs_rt::{
 //!     client::{podman::Podman, Client, Handle},
 //!     container::{Container, Image},
 //! };
