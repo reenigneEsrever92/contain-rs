@@ -19,9 +19,6 @@ pub mod docker;
 pub mod podman;
 pub mod shared;
 
-pub use self::docker::Docker;
-pub use self::podman::Podman;
-
 ///
 /// The client Trait represents a way to access a client.
 ///

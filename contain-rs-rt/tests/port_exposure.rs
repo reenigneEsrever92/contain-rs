@@ -1,5 +1,5 @@
 use contain_rs_rt::{
-    client::{podman::Podman, Client, Docker, Handle},
+    client::{docker::Docker, podman::Podman, Client, Handle},
     container::{Container, HealthCheck, Image, WaitStrategy},
 };
 use rstest::*;

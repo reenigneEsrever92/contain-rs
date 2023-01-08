@@ -20,6 +20,9 @@ pub fn generate_container(model: Model) -> TokenStream {
     quote! {
         impl IntoContainer for #struct_name {
             fn into_container(self) -> Container {
+                use std::str::FromStr;
+                use std::time::Duration;
+
                 let image = Image::from_str(#image_name).unwrap();
                 let mut container = Container::from_image(image);
                 #command
@@ -131,6 +134,9 @@ mod test {
         let expected_tokens = quote! {
             impl IntoContainer for Nginx {
                 fn into_container(self) -> Container {
+                    use std::str::FromStr;
+                    use std::time::Duration;
+
                     let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);
                     container
@@ -168,6 +174,9 @@ mod test {
         let expected_tokens = quote! {
             impl IntoContainer for SimpleImage {
                 fn into_container(self) -> Container {
+                    use std::str::FromStr;
+                    use std::time::Duration;
+
                     let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);
                     container.command(vec!["nginx".to_string(), "-g".to_string(), "daemon off;".to_string(),]);

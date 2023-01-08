@@ -1,6 +1,5 @@
 use contain_rs_macro::ContainerImpl;
 use contain_rs_rt::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
-use std::str::FromStr;
 
 #[derive(ContainerImpl, Default)]
 #[container(image = "docker.io/library/nginx", health_check_command = "curl http://localhost || exit 1", ports = [8080:80])]
@@ -8,7 +7,7 @@ struct Nginx;
 
 #[cfg(test)]
 mod test {
-    use contain_rs_rt::client::{Client, Handle, Podman};
+    use contain_rs_rt::client::{podman::Podman, Client, Handle};
 
     use crate::Nginx;
 
