@@ -10,30 +10,19 @@ use regex::Regex;
 
 use crate::{
     container::{Container, WaitStrategy},
-    error::{ContainerResult, Context, ErrorType},
+    error::{ContainerResult, ContainersError},
     rt::{ContainerStatus, DetailedContainerInfo},
 };
 
 use super::{Client, Log};
 
 pub fn run_and_wait_for_command_infallible(command: &mut Command) -> ContainerResult<String> {
-    match run_and_wait_for_command(command) {
-        Ok(output) => {
-            if let Some(0) = output.status.code() {
-                Ok(String::from_utf8(output.stdout).unwrap())
-            } else {
-                Err(Context::new()
-                    .info("message", "Non zero exit-code")
-                    .info("exit-code", &output.status.code().unwrap())
-                    .info("command", command)
-                    .info("stderror", &String::from_utf8(output.stderr).unwrap())
-                    .into_error(ErrorType::CommandError))
-            }
-        }
-        Err(e) => Err(Context::new()
-            .info("message", "Io error while getting process output")
-            .source(e)
-            .into_error(ErrorType::Unrecoverable)),
+    let output = run_and_wait_for_command(command)?;
+
+    if let Some(0) = output.status.code() {
+        Ok(String::from_utf8(output.stdout).unwrap())
+    } else {
+        Err(ContainersError::CommandError(output))
     }
 }
 
@@ -50,13 +39,7 @@ pub fn run_and_wait_for_command(command: &mut Command) -> ContainerResult<Output
 
     trace!("Command result: {:?}", result);
 
-    match result {
-        Ok(output) => Ok(output),
-        Err(e) => Err(Context::new()
-            .info("message", "Io error while getting process output")
-            .source(e)
-            .into_error(ErrorType::Unrecoverable)),
-    }
+    Ok(result?)
 }
 
 pub fn build_log_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
@@ -157,19 +140,12 @@ pub fn inspect<C: Client>(
 
     let output = run_and_wait_for_command(&mut cmd)?;
 
-    let stdout = String::from_utf8(output.stdout).unwrap();
-    let stderr = String::from_utf8(output.stderr).unwrap();
+    let stdout = String::from_utf8(output.stdout.clone()).unwrap();
+    let stderr = String::from_utf8(output.stderr.clone()).unwrap();
 
     match output.status.code() {
         Some(0) => {
-            let container_infos: Vec<DetailedContainerInfo> = serde_json::from_str(&stdout)
-                .map_err(|e| {
-                    Context::new()
-                        .source(e)
-                        .info("message", "could not parse inspect output")
-                        .info("json", &stdout)
-                        .into_error(ErrorType::JsonError)
-                })?;
+            let container_infos: Vec<DetailedContainerInfo> = serde_json::from_str(&stdout)?;
 
             debug!(
                 "Inspect json: {}",
@@ -185,11 +161,7 @@ pub fn inspect<C: Client>(
             if stderr.to_uppercase().contains("NO SUCH OBJECT") {
                 Ok(None)
             } else {
-                Err(Context::new()
-                    .info("message", "Unexpected error while inspecting container")
-                    .info("stderr", &stderr)
-                    .info("stdout", &stdout)
-                    .into_error(ErrorType::CommandError))
+                Err(ContainersError::CommandError(output))
             }
         }
     }
@@ -200,21 +172,19 @@ pub fn do_log<C: Client>(client: &C, container: &Container) -> ContainerResult<L
 
     build_log_command(&mut cmd, container);
 
-    match cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
-        Ok(child) => Ok(Log { child }),
-        Err(e) => Err(Context::new()
-            .source(e)
-            .info("message", "Could not spawn log command")
-            .into_error(ErrorType::LogError)),
-    }
+    let child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+
+    Ok(Log { child })
 }
 
 pub fn wait_for<C: Client>(client: &C, container: &Container) -> ContainerResult<()> {
     let result = match &container.wait_strategy {
         Some(strategy) => match strategy {
-            WaitStrategy::LogMessage { pattern } => wait_for_log(client, container, pattern),
-            WaitStrategy::HealthCheck => wait_for_health_check(client, container),
-            WaitStrategy::WaitTime { duration } => wait_for_time(duration.to_owned()),
+            WaitStrategy::LogMessage { pattern } => {
+                wait_for_log(client, container, strategy, pattern)
+            }
+            WaitStrategy::HealthCheck => Ok(wait_for_health_check(client, container)?),
+            WaitStrategy::WaitTime { duration } => Ok(wait_for_time(duration.to_owned())?),
         },
         None => Ok(()),
     };
@@ -232,45 +202,36 @@ fn wait_for_time(duration: Duration) -> ContainerResult<()> {
 fn wait_for_log<C: Client>(
     client: &C,
     container: &Container,
+    wait_strategy: &WaitStrategy,
     pattern: &Regex,
 ) -> ContainerResult<()> {
-    match do_log(client, container) {
-        Ok(log) => do_wait_for_log(pattern, log),
-        Err(e) => Err(Context::new()
-            .source(e)
-            .info("message", "Waiting for log output failed")
-            .into_error(ErrorType::LogError)),
-    }
+    let log = do_log(client, container)?;
+    do_wait_for_log(pattern, container, wait_strategy, log)?;
+
+    Ok(())
 }
 
-fn do_wait_for_log(pattern: &Regex, mut log: Log) -> ContainerResult<()> {
+fn do_wait_for_log(
+    pattern: &Regex,
+    container: &Container,
+    wait_strategy: &WaitStrategy,
+    mut log: Log,
+) -> ContainerResult<()> {
     if let Some(read) = log.stream() {
-        for line in read.lines() {
-            match line {
-                Ok(line) => {
-                    debug!("Searching for LogMessage pattern: {pattern}, in: {line}");
-                    if pattern.is_match(&line) {
-                        debug!("Found pattern in line: {line}");
-                        // wait a little after reading the log message just to be sure the container really is ready
-                        return Ok(());
-                    }
-                }
-                Err(e) => {
-                    return Err(Context::new()
-                        .source(e)
-                        .info("reason", "Could not read from log")
-                        .into_error(ErrorType::LogError))
-                }
+        for result in read.lines() {
+            let line = result?;
+            debug!("Searching for LogMessage pattern: {pattern}, in: {line}");
+            if pattern.is_match(&line) {
+                debug!("Found pattern in line: {line}");
+                return Ok(());
             }
         }
     }
 
-    Err(Context::new()
-        .info(
-            "reason",
-            "Log has been closed before message could be found",
-        )
-        .into_error(ErrorType::WaitError))
+    Err(ContainersError::ContainerWaitFailed {
+        container_name: container.name.clone(),
+        wait_strategy: wait_strategy.clone(),
+    })
 }
 
 fn wait_for_health_check<C: Client>(client: &C, container: &Container) -> ContainerResult<()> {
@@ -284,17 +245,17 @@ fn wait_for_health_check<C: Client>(client: &C, container: &Container) -> Contai
                         ContainerStatus::Healthy => return Ok(()),
                         ContainerStatus::Starting => thread::sleep(Duration::from_millis(200)),
                         _ => {
-                            return Err(Context::new()
-                                .info("message", "Invalid container status")
-                                .into_error(ErrorType::WaitError))
+                            return Err(ContainersError::ContainerStatusError {
+                                status: health.status,
+                            })
                         }
                     }
                 }
             }
             None => {
-                return Err(Context::new()
-                    .info("message", "Container not running")
-                    .into_error(ErrorType::WaitError))
+                return Err(ContainersError::ContainerNotExists {
+                    container_name: container.name.clone(),
+                })
             }
         }
     }

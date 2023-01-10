@@ -12,7 +12,7 @@ use lazy_static::lazy_static;
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
-use crate::error::{ContainerResult, ContainersError, Context};
+use crate::error::{ContainerResult, ContainersError};
 
 lazy_static! {
     static ref IMAGE_REGEX: Regex = Regex::new("([0-9a-zA-Z./]+)(:([0-9a-zA-Z.]+))?").unwrap();
@@ -82,7 +82,7 @@ impl HealthCheck {
 ///
 /// A wait strategy can be used to wait for a cotnainer to be ready.
 ///
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum WaitStrategy {
     ///
     /// Waits for a log message to appear.
@@ -185,9 +185,9 @@ impl FromStr for Image {
                 cap.get(3).map(|m| m.as_str()).unwrap_or("latest"),
             ))
         } else {
-            Err(Context::new()
-                .info("message", &format!("Invalid image name: {s}"))
-                .into_error(crate::error::ErrorType::ContainerError))
+            Err(ContainersError::InvalidImageName {
+                name: s.to_string(),
+            })
         }
     }
 }
@@ -263,6 +263,23 @@ impl Container {
     ///
     pub fn command(&mut self, command: Vec<String>) -> &mut Self {
         self.command = command;
+        self
+    }
+
+    pub fn map_ports<T, T2>(&mut self, ports: &[(T, T2)]) -> &mut Self
+    where
+        T: Into<Port> + Clone,
+        T2: Into<Port> + Clone,
+    {
+        self.port_mappings = ports
+            .iter()
+            .cloned()
+            .map(|mapping| PortMapping {
+                source: mapping.0.into(),
+                target: mapping.1.into(),
+            })
+            .collect();
+
         self
     }
 

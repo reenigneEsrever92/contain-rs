@@ -2,7 +2,7 @@
 
 members = [
     "contain-rs",
-    "contain-rs-rt",
+    "contain-rs-core",
     "contain-rs-macro",
     "contain-rs-parser",
     "images/contain-rs-postgres",

@@ -14,7 +14,7 @@ use super::{
 /// The Podman struct is used for acessing the podman cli.
 ///
 /// ```
-/// use contain_rs_rt::{
+/// use contain_rs_core::{
 ///     client::{podman::Podman, Client, Handle},
 ///     container::{Container, Image, HealthCheck, WaitStrategy},
 /// };

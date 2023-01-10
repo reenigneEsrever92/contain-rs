@@ -1,4 +1,4 @@
-use contain_rs_rt::{
+use contain_rs_core::{
     client::{docker::Docker, podman::Podman, Client},
     container::{Container, HealthCheck, Image, WaitStrategy},
 };
@@ -17,10 +17,13 @@ fn docker() -> Docker {
 }
 
 #[rstest]
-#[case::podman_wait_for_log(podman())]
-#[case::docker_wait_for_log(docker())]
-fn test_wait_for_log(#[case] client: impl Client) {
+#[test_log::test]
+#[case::podman_wait_for_log(podman(), 8090)]
+#[case::docker_wait_for_log(docker(), 8091)]
+fn test_wait_for_log(#[case] client: impl Client, #[case] port: u32) {
     let mut container = Container::from_image(Image::from_str("docker.io/library/nginx").unwrap());
+
+    container.map_ports(&[(port, 80)]);
 
     container.wait_for(WaitStrategy::LogMessage {
         pattern: regex::Regex::from_str("ready for start up").unwrap(),

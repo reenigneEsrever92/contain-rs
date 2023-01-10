@@ -18,7 +18,7 @@ use super::{
 /// The Docker struct is used for acessing the docker cli.
 ///
 /// ```
-/// use contain_rs_rt::{
+/// use contain_rs_core::{
 ///     client::{docker::Docker, Client, Handle},
 ///     container::{Container, Image, HealthCheck, WaitStrategy},
 /// };

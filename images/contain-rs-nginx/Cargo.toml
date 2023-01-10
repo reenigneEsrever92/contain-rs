@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-contain-rs-rt = { path = "../../contain-rs-rt" }
+contain-rs-core = { path = "../../contain-rs-core" }
 contain-rs-macro = { path = "../../contain-rs-macro" }
 
 [dev-dependencies]

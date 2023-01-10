@@ -27,17 +27,17 @@ pub struct HealthCheck {
 /// Health status of a container.
 ///
 /// ```
-/// use contain_rs_rt::rt::ContainerStatus;
+/// use contain_rs_core::rt::ContainerStatus;
 ///
 /// assert_eq!(serde_json::from_str::<ContainerStatus>("\"starting\"").unwrap(), ContainerStatus::Starting);
-/// assert_eq!(serde_json::from_str::<ContainerStatus>("\"\"").unwrap(), ContainerStatus::Empty);
+/// assert_eq!(serde_json::from_str::<ContainerStatus>("\"\"").unwrap(), ContainerStatus::None);
 ///
 /// ```
 ///
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub enum ContainerStatus {
     #[serde(alias = "")]
-    Empty,
+    None,
     #[serde(alias = "starting")]
     Starting,
     #[serde(alias = "exited")]

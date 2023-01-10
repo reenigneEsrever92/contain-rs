@@ -8,7 +8,7 @@ proc-macro = true
 
 [dependencies]
 contain-rs-parser = { path = "../contain-rs-parser" }
-contain-rs-rt = { path = "../contain-rs-rt" }
+contain-rs-core = { path = "../contain-rs-core" }
 syn = { version = "1.0", features = ["full", "extra-traits"] }
 quote = "1.0"
 proc-macro2 = "1.0"
