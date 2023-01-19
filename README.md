@@ -1,4 +1,4 @@
-![example workflow](https://github.com/reenigneEsrever92/contain-rs/actions/workflows/rust.yml/badge.svg)
+![Test](https://github.com/reenigneEsrever92/contain-rs/actions/workflows/rust.yml/badge.svg)
 
 # contain-rs
 
@@ -27,7 +27,7 @@ let docker = Docker::new();
 
 let container = Container::from_image(Image::from_name("docker.io/library/nginx"));
 
-let handle = docker.create(container);
+let handle = podman.create(container);
 
 handle.run();
 handle.wait();

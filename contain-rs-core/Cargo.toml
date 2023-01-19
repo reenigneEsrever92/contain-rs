@@ -10,17 +10,16 @@ readme = "README.md"
 categories = ["development-tools::testing"]
 
 [dependencies]
-rand = "0.8"
-log = "0.4"
-regex = "1.5"
-lazy_static = "1.4"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tracing-error = "0.2"
-thiserror = "1.0"
+rand = { workspace = true }
+log = { workspace = true }
+regex = { workspace = true }
+lazy_static = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workpsace = true }
 
 [dev-dependencies]
-reqwest = { version = "0.11", features = ["blocking"] }
-rstest = "0.16"
-test-log = "0.2"
-env_logger = "0.10"
+reqwest = { workspace = true, features = ["blocking"] }
+rstest = { workspace = true }
+test-log = { workspace = true }
+env_logger = { workspace = true }

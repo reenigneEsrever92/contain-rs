@@ -5,6 +5,6 @@ edition = "2021"
 
 [dependencies]
 contain-rs-core = { path = "../contain-rs-core" }
-syn = { version = "1.0", features = ["full", "extra-traits"] }
-quote = "1.0"
-proc-macro2 = { version = "1.0", features = ["span-locations"] }
+syn = { workspace = true, features = ["full", "extra-traits"] }
+quote = { workspace = true }
+proc-macro2 = { workspace = true, features = ["span-locations"] }

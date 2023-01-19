@@ -8,4 +8,4 @@ contain-rs-core = { path = "../../contain-rs-core" }
 contain-rs-macro = { path = "../../contain-rs-macro" }
 
 [dev-dependencies]
-reqwest = { version = "0.11", features = ["blocking"] }
+reqwest = { workspace = true, features = ["blocking"] }
