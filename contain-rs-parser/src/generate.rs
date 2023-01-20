@@ -15,13 +15,12 @@ pub fn generate_container(model: Model) -> TokenStream {
     let wait_time = model.wait_time;
     let wait_log = model.wait_log;
 
-    // TODO generate wait time
-
     quote! {
         impl IntoContainer for #struct_name {
             fn into_container(self) -> Container {
                 use std::str::FromStr;
                 use std::time::Duration;
+                use contain_rs::Regex;
 
                 let image = Image::from_str(#image_name).unwrap();
                 let mut container = Container::from_image(image);
@@ -136,6 +135,7 @@ mod test {
                 fn into_container(self) -> Container {
                     use std::str::FromStr;
                     use std::time::Duration;
+                    use contain_rs::Regex;
 
                     let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);
@@ -176,6 +176,7 @@ mod test {
                 fn into_container(self) -> Container {
                     use std::str::FromStr;
                     use std::time::Duration;
+                    use contain_rs::Regex;
 
                     let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);

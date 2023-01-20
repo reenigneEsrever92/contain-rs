@@ -8,3 +8,4 @@ contain-rs-core = { path = "../contain-rs-core" }
 syn = { workspace = true, features = ["full", "extra-traits"] }
 quote = { workspace = true }
 proc-macro2 = { workspace = true, features = ["span-locations"] }
+regex = { workspace = true }
