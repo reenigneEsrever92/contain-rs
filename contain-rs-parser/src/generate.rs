@@ -20,7 +20,7 @@ pub fn generate_container(model: Model) -> TokenStream {
             fn into_container(self) -> Container {
                 use std::str::FromStr;
                 use std::time::Duration;
-                use contain_rs::Regex;
+                use contain_rs::*;
 
                 let image = Image::from_str(#image_name).unwrap();
                 let mut container = Container::from_image(image);
@@ -106,7 +106,9 @@ fn generate_env_var(field: &ModelField, name: &str) -> TokenStream {
             container.env_var((#name, self.#field_name));
         },
         crate::model::FieldType::Option => quote! {
-            self.#field_name.and_then(|value| container.env_var((#name, value)));
+            if let Some(value) = self.#field_name {
+                container.env_var((#name, value));
+            }
         },
     }
 }
@@ -135,7 +137,7 @@ mod test {
                 fn into_container(self) -> Container {
                     use std::str::FromStr;
                     use std::time::Duration;
-                    use contain_rs::Regex;
+                    use contain_rs::*;
 
                     let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);
@@ -176,13 +178,15 @@ mod test {
                 fn into_container(self) -> Container {
                     use std::str::FromStr;
                     use std::time::Duration;
-                    use contain_rs::Regex;
+                    use contain_rs::*;
 
                     let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);
                     container.command(vec!["nginx".to_string(), "-g".to_string(), "daemon off;".to_string(),]);
                     container.env_var(("PASSWORD", self.password));
-                    self.user.and_then(|value| container.env_var(("USER", value)));
+                    if let Some(value) = self.user {
+                        container.env_var(("USER", value));
+                    }
                     container.map_port(8080u32, 8080u32);
                     container.map_port(8081u32, 8080u32);
                     container.health_check(HealthCheck::new("curl http://localhost || exit 1"))

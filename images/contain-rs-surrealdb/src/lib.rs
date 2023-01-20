@@ -2,7 +2,7 @@ use contain_rs::*;
 
 #[derive(ContainerImpl)]
 #[container(image = "docker.io/surrealdb/surrealdb:latest", command = ["start"], wait_log = "Started web server on" )]
-struct SurrealDB;
+pub struct SurrealDB;
 
 #[cfg(test)]
 mod test {
