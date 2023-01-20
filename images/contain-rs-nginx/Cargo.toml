@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-contain-rs-core = { path = "../../contain-rs-core" }
-contain-rs-macro = { path = "../../contain-rs-macro" }
+contain-rs = { path = "../../contain-rs", features = ["macros"] }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
