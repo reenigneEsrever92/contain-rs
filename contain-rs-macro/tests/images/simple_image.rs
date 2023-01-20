@@ -1,6 +1,4 @@
-use contain_rs_core::container::{Container, HealthCheck, Image, IntoContainer, WaitStrategy};
-use contain_rs_macro::ContainerImpl;
-use std::str::FromStr;
+use contain_rs::*;
 
 #[derive(Default, ContainerImpl)]
 #[container(
@@ -11,13 +9,4 @@ use std::str::FromStr;
 struct SimpleImage {
     #[env_var("PG_PASSWORD")]
     password: String,
-}
-
-fn main() {
-    // let podman = Podman::new();
-    // let container = SimpleImage::default().into_container();
-
-    // podman.run(&container).unwrap();
-    // podman.wait(&container).unwrap();
-    // podman.rm(&container).unwrap();
 }
