@@ -12,7 +12,7 @@ Add containers to your Cargo.toml
 
 ```toml
 [dependencies]
-contain-rs = "0.1"
+contain-rs = "0.2"
 ```
 
 Create a client and start a container:

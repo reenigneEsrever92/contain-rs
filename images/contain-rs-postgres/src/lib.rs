@@ -6,23 +6,25 @@ use contain_rs::*;
     health_check_command = "pg_isready"
 )]
 pub struct Postgres {
-    // #[env_var = "POSTGRES_DB"]
+    #[env_var = "POSTGRES_DB"]
     db: Option<String>,
-    // #[env_var = "POSTGRES_USER"]
+    #[env_var = "POSTGRES_USER"]
     user: Option<String>,
     #[env_var = "POSTGRES_PASSWORD"]
     password: String,
 }
 
-impl Postgres {
-    pub fn default() -> Self {
+impl Default for Postgres {
+    fn default() -> Self {
         Self {
             db: None,
             user: None,
             password: "default_pw".to_string(),
         }
     }
+}
 
+impl Postgres {
     pub fn with_password(mut self, password: &str) -> Self {
         self.password = password.to_string();
         self
