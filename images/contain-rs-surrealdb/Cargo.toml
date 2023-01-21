@@ -8,4 +8,4 @@ contain-rs = { path = "../../contain-rs", features = ["macros"] }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
-log = { workspace = true }
+tracing-subscriber = { workspace = true }

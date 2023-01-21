@@ -52,6 +52,6 @@ mod test {
         let client = Podman::new();
         let container = client.create(Postgres::default());
 
-        container.run().unwrap();
+        container.run_and_wait().unwrap();
     }
 }

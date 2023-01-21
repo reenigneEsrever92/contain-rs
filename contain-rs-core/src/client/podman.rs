@@ -5,7 +5,7 @@ use crate::{container::*, error::ContainerResult, rt::DetailedContainerInfo};
 use super::{
     shared::{
         build_rm_command, build_run_command, build_stop_command, do_log, inspect,
-        run_and_wait_for_command_infallible, wait_for,
+        run_and_wait_for_command, wait_for,
     },
     Client, ContainerHandle, Log,
 };
@@ -74,7 +74,7 @@ impl Client for Podman {
         let mut command = self.build_command();
 
         build_run_command(&mut command, container);
-        run_and_wait_for_command_infallible(&mut command)?;
+        run_and_wait_for_command(&mut command)?;
 
         Ok(())
     }
@@ -83,7 +83,7 @@ impl Client for Podman {
         let mut command = self.build_command();
 
         build_stop_command(&mut command, container);
-        run_and_wait_for_command_infallible(&mut command)?;
+        run_and_wait_for_command(&mut command)?;
 
         Ok(())
     }
@@ -92,7 +92,7 @@ impl Client for Podman {
         let mut command = self.build_command();
 
         build_rm_command(&mut command, container);
-        run_and_wait_for_command_infallible(&mut command)?;
+        run_and_wait_for_command(&mut command)?;
 
         Ok(())
     }

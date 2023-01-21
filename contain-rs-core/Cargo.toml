@@ -11,15 +11,13 @@ categories = ["development-tools::testing"]
 
 [dependencies]
 rand = { workspace = true }
-log = { workspace = true }
 regex = { workspace = true }
 lazy_static = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
 rstest = { workspace = true }
-test-log = { workspace = true }
-env_logger = { workspace = true }

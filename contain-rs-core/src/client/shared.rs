@@ -5,8 +5,8 @@ use std::{
     time::Duration,
 };
 
-use log::{debug, trace};
 use regex::Regex;
+use tracing::*;
 
 use crate::{
     container::{Container, WaitStrategy},
@@ -16,8 +16,8 @@ use crate::{
 
 use super::{Client, Log};
 
-pub fn run_and_wait_for_command_infallible(command: &mut Command) -> ContainerResult<String> {
-    let output = run_and_wait_for_command(command)?;
+pub fn run_and_wait_for_command(command: &mut Command) -> ContainerResult<String> {
+    let output = try_run_and_wait_for_command(command)?;
 
     if let Some(0) = output.status.code() {
         Ok(String::from_utf8(output.stdout).unwrap())
@@ -26,8 +26,9 @@ pub fn run_and_wait_for_command_infallible(command: &mut Command) -> ContainerRe
     }
 }
 
-pub fn run_and_wait_for_command(command: &mut Command) -> ContainerResult<Output> {
-    debug!("Run and wait for command: {:?}", command);
+#[instrument(skip_all)]
+pub fn try_run_and_wait_for_command(command: &mut Command) -> ContainerResult<Output> {
+    debug!(?command, "Running command");
 
     let child = command
         .stdout(Stdio::piped()) // TODO fm - Sometimes podman asks the user for which repo to use. This is currently ignored.
@@ -35,11 +36,7 @@ pub fn run_and_wait_for_command(command: &mut Command) -> ContainerResult<Output
         .spawn()
         .unwrap();
 
-    let result = child.wait_with_output();
-
-    trace!("Command result: {:?}", result);
-
-    Ok(result?)
+    Ok(child.wait_with_output()?)
 }
 
 pub fn build_log_command<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
@@ -130,6 +127,7 @@ fn add_export_ports_args(command: &mut Command, container: &Container) {
     })
 }
 
+#[instrument(skip_all)]
 pub fn inspect<C: Client>(
     client: &C,
     container: &Container,
@@ -138,7 +136,7 @@ pub fn inspect<C: Client>(
 
     build_inspect_command(&mut cmd, container);
 
-    let output = run_and_wait_for_command(&mut cmd)?;
+    let output = try_run_and_wait_for_command(&mut cmd)?;
 
     let stdout = String::from_utf8(output.stdout.clone()).unwrap();
     let stderr = String::from_utf8(output.stderr.clone()).unwrap();
@@ -147,10 +145,7 @@ pub fn inspect<C: Client>(
         Some(0) => {
             let container_infos: Vec<DetailedContainerInfo> = serde_json::from_str(&stdout)?;
 
-            debug!(
-                "Inspect json: {}",
-                serde_json::to_string_pretty(&container_infos).unwrap()
-            );
+            debug!(?container_infos, "Inspect container");
 
             match container_infos.get(0) {
                 Some(info) => Ok(Some(info.to_owned())),
@@ -211,18 +206,19 @@ fn wait_for_log<C: Client>(
     Ok(())
 }
 
+#[instrument(skip_all)]
 fn do_wait_for_log(
     pattern: &Regex,
     container: &Container,
     wait_strategy: &WaitStrategy,
     mut log: Log,
 ) -> ContainerResult<()> {
+    debug!(?pattern, "Searching log");
     if let Some(read) = log.stream() {
         for result in read.lines() {
             let line = result?;
-            debug!("Searching for LogMessage pattern: {pattern}, in: {line}");
             if pattern.is_match(&line) {
-                debug!("Found pattern in line: {line}");
+                debug!(?line, ?pattern, "Found pattern");
                 return Ok(());
             }
         }
@@ -234,6 +230,7 @@ fn do_wait_for_log(
     })
 }
 
+#[instrument(skip_all)]
 fn wait_for_health_check<C: Client>(client: &C, container: &Container) -> ContainerResult<()> {
     loop {
         debug!("Checking health for {}", &container.name);

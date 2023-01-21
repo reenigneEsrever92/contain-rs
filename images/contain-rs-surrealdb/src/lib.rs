@@ -17,15 +17,19 @@ pub struct SurrealDB {
 #[cfg(test)]
 mod test {
     use contain_rs::{Client, Docker, Handle};
+    use tracing_subscriber::filter::LevelFilter;
 
     use crate::SurrealDB;
 
     #[test]
     fn test_surrealdb() {
+        tracing_subscriber::fmt()
+        .with_max_level(LevelFilter::TRACE).init();
+
         let client = Docker::new();
         let container = client.create(SurrealDB::default());
 
-        container.run().unwrap();
+        container.run_and_wait().unwrap();
 
         let client = reqwest::blocking::Client::new();
 
