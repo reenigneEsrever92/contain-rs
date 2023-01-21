@@ -21,8 +21,12 @@ impl TryFrom<Attribute> for FieldAttribute {
     fn try_from(value: Attribute) -> Result<Self, Self::Error> {
         match value.path.get_ident() {
             Some(ident) => match ident.to_string().as_str() {
-                "env_var" => parse_env_var(value),
-                _ => Err(syn::Error::new_spanned(value, "Expected any of ...")), // TODO
+                "env_var" => Ok(FieldAttribute::EnvVar(parse_field_attribute_value(value)?)),
+                "arg" => Ok(FieldAttribute::Arg(parse_field_attribute_value(value)?)),
+                _ => Err(syn::Error::new_spanned(
+                    value,
+                    "Expected any of: arg or env_var",
+                )),
             },
             None => Err(syn::Error::new_spanned(value, "Expected identifier")),
         }
@@ -143,11 +147,11 @@ pub fn parse_container(tokens: TokenStream) -> SynResult<Model> {
     parse_derive_input(item_ast)
 }
 
-fn parse_env_var(value: Attribute) -> SynResult<FieldAttribute> {
+fn parse_field_attribute_value(value: Attribute) -> SynResult<String> {
     let field_property: FieldProperty = syn::parse2(value.tokens)?;
 
     match field_property.value {
-        Lit::Str(str) => Ok(FieldAttribute::EnvVar(str.value())),
+        Lit::Str(str) => Ok(str.value()),
         _ => Err(syn::Error::new_spanned(
             field_property.value,
             "Expected string literal",
@@ -278,7 +282,7 @@ fn parse_field(field: Field) -> SynResult<ModelField> {
 
     Ok(ModelField {
         name: field.ident.unwrap().to_string(),
-        ty,
+        r#type: ty,
         attributes: attrs,
     })
 }
@@ -411,6 +415,8 @@ mod test {
             struct SimpleImage {
                 #[env_var = "PASSWORD"]
                 password: String,
+                #[arg = "--arg"]
+                arg: Option<String>,
             }
         };
 
@@ -435,11 +441,18 @@ mod test {
                         target: 8080
                     }
                 ],
-                fields: vec![ModelField {
-                    name: "password".to_string(),
-                    ty: FieldType::Simple,
-                    attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
-                }],
+                fields: vec![
+                    ModelField {
+                        name: "password".to_string(),
+                        r#type: FieldType::Simple,
+                        attributes: vec![FieldAttribute::EnvVar("PASSWORD".to_string())]
+                    },
+                    ModelField {
+                        name: "arg".to_string(),
+                        r#type: FieldType::Option,
+                        attributes: vec![FieldAttribute::Arg("--arg".to_string())]
+                    }
+                ],
                 wait_time: Some(WaitTime {
                     time: Duration::from_secs(2)
                 }),

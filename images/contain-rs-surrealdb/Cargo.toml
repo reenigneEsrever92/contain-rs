@@ -7,5 +7,5 @@ edition = "2021"
 contain-rs = { path = "../../contain-rs", features = ["macros"] }
 
 [dev-dependencies]
-reqwest = { workspace = true }
+reqwest = { workspace = true, features = ["blocking"] }
 log = { workspace = true }

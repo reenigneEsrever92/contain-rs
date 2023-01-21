@@ -1,8 +1,18 @@
 use contain_rs::*;
 
-#[derive(ContainerImpl)]
-#[container(image = "docker.io/surrealdb/surrealdb:latest", command = ["start"], wait_log = "Started web server on" )]
-pub struct SurrealDB;
+#[derive(Default, ContainerImpl)]
+#[container(
+    image = "docker.io/surrealdb/surrealdb:latest", 
+    command = ["start"], 
+    ports = [8080:8000], 
+    wait_log = "Started web server on"
+)]
+pub struct SurrealDB {
+    #[arg = "--user"]
+    user: Option<String>,
+    #[arg = "--pass"]
+    password: Option<String>,
+}
 
 #[cfg(test)]
 mod test {
@@ -11,10 +21,25 @@ mod test {
     use crate::SurrealDB;
 
     #[test]
-    fn test_run() {
+    fn test_surrealdb() {
         let client = Docker::new();
-        let container = client.create(SurrealDB);
+        let container = client.create(SurrealDB::default());
 
         container.run().unwrap();
+
+        let client = reqwest::blocking::Client::new();
+
+        let request = client
+            .post("http://localhost:8080/sql")
+            .header("Accept", "application/json")
+            .header("NS", "test")
+            .header("DB", "test")
+            .body("create type::table(\"test_table\")")
+            .build()
+            .unwrap();
+
+        let response = client.execute(request).unwrap();
+
+        assert_eq!(reqwest::StatusCode::OK, response.status())
     }
 }

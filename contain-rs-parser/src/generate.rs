@@ -94,20 +94,38 @@ fn generate_field_tokens(field: &ModelField, attributes: &[FieldAttribute]) -> V
         .iter()
         .map(|attr| match attr {
             FieldAttribute::EnvVar(name) => generate_env_var(field, name),
+            FieldAttribute::Arg(name) => generate_arg(field, name),
         })
         .collect()
+}
+
+fn generate_arg(field: &ModelField, name: &str) -> TokenStream {
+    let field_name = format_ident!("{}", &field.name);
+
+    match field.r#type {
+        crate::model::FieldType::Simple => quote! {
+            container.arg(#name);
+            container.arg(&self.#field_name);
+        },
+        crate::model::FieldType::Option => quote! {
+            if let Some(value) = self.#field_name {
+                container.arg(#name);
+                container.arg(&value);
+            }
+        },
+    }
 }
 
 fn generate_env_var(field: &ModelField, name: &str) -> TokenStream {
     let field_name = format_ident!("{}", &field.name);
 
-    match field.ty {
+    match field.r#type {
         crate::model::FieldType::Simple => quote! {
-            container.env_var((#name, self.#field_name));
+            container.env_var(#name, &self.#field_name);
         },
         crate::model::FieldType::Option => quote! {
             if let Some(value) = self.#field_name {
-                container.env_var((#name, value));
+                container.env_var(#name, &value);
             }
         },
     }
@@ -166,7 +184,9 @@ mod test {
                 #[env_var = "PASSWORD"]
                 password: String,
                 #[env_var = "USER"]
-                user: Option<String>
+                user: Option<String>,
+                #[arg = "--arg"]
+                arg: String,
             }
         };
 
@@ -183,10 +203,12 @@ mod test {
                     let image = Image::from_str("docker.io/library/nginx").unwrap();
                     let mut container = Container::from_image(image);
                     container.command(vec!["nginx".to_string(), "-g".to_string(), "daemon off;".to_string(),]);
-                    container.env_var(("PASSWORD", self.password));
+                    container.env_var("PASSWORD", &self.password);
                     if let Some(value) = self.user {
-                        container.env_var(("USER", value));
+                        container.env_var("USER", &value);
                     }
+                    container.arg("--arg");
+                    container.arg(&self.arg);
                     container.map_port(8080u32, 8080u32);
                     container.map_port(8081u32, 8080u32);
                     container.health_check(HealthCheck::new("curl http://localhost || exit 1"))

@@ -266,6 +266,11 @@ impl Container {
         self
     }
 
+    pub fn arg<T: Into<String>>(&mut self, arg: T) -> &mut Self {
+        self.command.push(arg.into());
+        self
+    }
+
     pub fn map_ports<T, T2>(&mut self, ports: &[(T, T2)]) -> &mut Self
     where
         T: Into<Port> + Clone,
@@ -297,9 +302,8 @@ impl Container {
     ///
     /// Define an environment variable for the container.
     ///
-    pub fn env_var(&mut self, var: impl Into<EnvVar>) -> &mut Self {
-        let env_var = var.into();
-        self.env_vars.push(env_var);
+    pub fn env_var<T: Into<String>>(&mut self, name: T, value: T) -> &mut Self {
+        self.env_vars.push((name, value).into());
         self
     }
 

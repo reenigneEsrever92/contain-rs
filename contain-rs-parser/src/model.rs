@@ -3,6 +3,7 @@ use std::time::Duration;
 #[derive(Debug, PartialEq, Eq)]
 pub enum FieldAttribute {
     EnvVar(String),
+    Arg(String),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -15,6 +16,12 @@ pub struct Model {
     pub wait_log: Option<WaitLog>,
     pub ports: Vec<Port>,
     pub fields: Vec<ModelField>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Arg {
+    pub name: String,
+    pub r#type: FieldType,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -40,7 +47,7 @@ pub struct WaitLog {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ModelField {
     pub name: String,
-    pub ty: FieldType,
+    pub r#type: FieldType,
     pub attributes: Vec<FieldAttribute>,
 }
 
