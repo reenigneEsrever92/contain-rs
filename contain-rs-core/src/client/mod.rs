@@ -6,8 +6,10 @@
 
 use std::{
     io::{BufRead, BufReader},
-    process::{Child, Command},
+    process::Command,
 };
+
+use os_pipe::PipeReader;
 
 use crate::{
     container::{Container, IntoContainer},
@@ -60,18 +62,12 @@ pub trait Handle {
 }
 
 pub struct Log {
-    pub child: Child,
-}
-
-impl Drop for Log {
-    fn drop(&mut self) {
-        self.child.kill().unwrap();
-    }
+    pub reader: PipeReader,
 }
 
 impl Log {
-    fn stream(&mut self) -> Option<impl BufRead> {
-        self.child.stdout.take().map(BufReader::new)
+    fn stream(&mut self) -> impl BufRead {
+        BufReader::new(self.reader.try_clone().unwrap())
     }
 }
 
@@ -90,9 +86,7 @@ impl<T: Client> Handle for ContainerHandle<T> {
     }
 
     fn wait(&self) -> ContainerResult<()> {
-        if !self.is_running()? {
-            self.client.wait(&self.container).unwrap();
-        }
+        self.client.wait(&self.container)?;
 
         Ok(())
     }

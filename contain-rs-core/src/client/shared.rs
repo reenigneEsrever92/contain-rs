@@ -162,14 +162,23 @@ pub fn inspect<C: Client>(
     }
 }
 
+#[instrument(skip_all)]
 pub fn do_log<C: Client>(client: &C, container: &Container) -> ContainerResult<Log> {
     let mut cmd = client.command();
 
     build_log_command(&mut cmd, container);
 
-    let child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+    let (reader, writer) = os_pipe::pipe()?;
 
-    Ok(Log { child })
+    // redirect all process out to that single pipe
+    let cmd = cmd
+        .stdout(writer.try_clone().unwrap())
+        .stderr(writer)
+        .spawn()?;
+
+    debug!(?cmd, "Reading log");
+
+    Ok(Log { reader })
 }
 
 pub fn wait_for<C: Client>(client: &C, container: &Container) -> ContainerResult<()> {
@@ -201,6 +210,7 @@ fn wait_for_log<C: Client>(
     pattern: &Regex,
 ) -> ContainerResult<()> {
     let log = do_log(client, container)?;
+
     do_wait_for_log(pattern, container, wait_strategy, log)?;
 
     Ok(())
@@ -214,13 +224,12 @@ fn do_wait_for_log(
     mut log: Log,
 ) -> ContainerResult<()> {
     debug!(?pattern, "Searching log");
-    if let Some(read) = log.stream() {
-        for result in read.lines() {
-            let line = result?;
-            if pattern.is_match(&line) {
-                debug!(?line, ?pattern, "Found pattern");
-                return Ok(());
-            }
+    for result in log.stream().lines() {
+        let line = result?;
+        debug!(?pattern, ?line, "Searching for pattern");
+        if pattern.is_match(&line) {
+            debug!(?line, ?pattern, "Found pattern");
+            return Ok(());
         }
     }
 

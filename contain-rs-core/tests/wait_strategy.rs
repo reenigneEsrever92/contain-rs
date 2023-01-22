@@ -17,7 +17,6 @@ fn docker() -> Docker {
 }
 
 #[rstest]
-#[test_log::test]
 #[case::podman_wait_for_log(podman(), 8090)]
 #[case::docker_wait_for_log(docker(), 8091)]
 fn test_wait_for_log(#[case] client: impl Client, #[case] port: u32) {

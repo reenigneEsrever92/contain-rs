@@ -5,7 +5,7 @@ use contain_rs::*;
     image = "docker.io/surrealdb/surrealdb:latest", 
     command = ["start"], 
     ports = [8080:8000], 
-    wait_log = "Started web server on"
+    wait_log = ".*Started web server on.*"
 )]
 pub struct SurrealDB {
     #[arg = "--user"]
@@ -23,8 +23,7 @@ mod test {
 
     #[test]
     fn test_surrealdb() {
-        tracing_subscriber::fmt()
-        .with_max_level(LevelFilter::TRACE).init();
+        tracing_subscriber::fmt().with_max_level(LevelFilter::TRACE).init();
 
         let client = Docker::new();
         let container = client.create(SurrealDB::default());
