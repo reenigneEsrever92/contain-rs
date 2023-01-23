@@ -1,6 +1,6 @@
 use contain_rs::*;
 
-#[derive(Default, ContainerImpl)]
+#[derive(Clone, Default, ContainerImpl)]
 #[container(
     image = "docker.io/surrealdb/surrealdb:latest", 
     command = ["start"], 
@@ -12,6 +12,18 @@ pub struct SurrealDB {
     user: Option<String>,
     #[arg = "--pass"]
     password: Option<String>,
+}
+
+impl SurrealDB {
+    fn user(&mut self, user: &str) -> Self {
+        self.user = Some(user.to_string());
+        self.clone()
+    }
+
+    fn password(&mut self, password: &str) -> Self {
+        self.password = Some(password.to_string());
+        self.clone()
+    }
 }
 
 #[cfg(test)]
