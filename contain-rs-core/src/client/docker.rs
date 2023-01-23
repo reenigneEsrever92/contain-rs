@@ -9,7 +9,7 @@ use crate::{
 use super::{
     shared::{
         build_rm_command, build_run_command, build_stop_command, do_log, inspect,
-        try_run_and_wait_for_command, wait_for,
+        run_and_wait_for_command, wait_for,
     },
     Client, ContainerHandle, Log,
 };
@@ -76,7 +76,7 @@ impl Client for Docker {
         let mut cmd = self.build_command();
 
         build_run_command(&mut cmd, container);
-        try_run_and_wait_for_command(&mut cmd)?;
+        run_and_wait_for_command(&mut cmd)?;
 
         Ok(())
     }
@@ -85,7 +85,7 @@ impl Client for Docker {
         let mut cmd = self.build_command();
 
         build_stop_command(&mut cmd, container);
-        try_run_and_wait_for_command(&mut cmd)?;
+        run_and_wait_for_command(&mut cmd)?;
 
         Ok(())
     }
@@ -94,7 +94,7 @@ impl Client for Docker {
         let mut cmd = self.build_command();
 
         build_rm_command(&mut cmd, container);
-        try_run_and_wait_for_command(&mut cmd)?;
+        run_and_wait_for_command(&mut cmd)?;
 
         Ok(())
     }
