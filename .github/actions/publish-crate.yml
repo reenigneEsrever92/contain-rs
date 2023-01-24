@@ -1,0 +1,14 @@
+name: Publish Crate
+
+inputs:
+  crate:
+    type: string
+    required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+runs:
+  - name: Publish Crate
+    run: |
+      cargo publish -p ${{ inputs.crate }}

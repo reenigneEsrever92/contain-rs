@@ -1,0 +1,17 @@
+name: Create Git Tag
+
+inputs:
+  crate-path:
+    type: string
+    required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+runs:
+  - name: Create Git Tag
+    run: |
+      cd ${{ inputs.crate-path }}
+      export VERSION=$(cargo get version)
+      git tag -a ${{ inputs.crate-path }}-${VERSION} -m "Release ${{ inputs.crate-path }} ${VERSION}"
+      git push origin ${{ inputs.crate-path }}-${VERSION}

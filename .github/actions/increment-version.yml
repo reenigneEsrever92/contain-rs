@@ -1,0 +1,22 @@
+name: Increment Version
+
+inputs:
+  crate-path:
+    type: string
+    required: true
+  level:
+    type: string
+    required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+runs:
+  - name: Publish Crate
+    run: |
+      cd ${{ inputs.crate-path }}
+      cargo bump ${{ inputs.level }}
+      export VERSION=$(cargo get version)
+      git add .
+      git commit -m "incremented ${{ inputs.crate-path }} patch level to ${VERSION}"
+      git push
