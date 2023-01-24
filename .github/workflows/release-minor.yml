@@ -31,13 +31,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: fregante/setup-git-user@v1
-      - name: Prepare
-        run: |
-          cargo install cargo-bump
-          cargo install cargo-get
-      - name: Crates.io Login
-        run: |
-          cargo login ${{ secrets.CRATES_IO_TOKEN }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+      # - name: Prepare
+      #   run: |
+      #     cargo install cargo-bump
+      #     cargo install cargo-get
+      # - name: Crates.io Login
+      #   run: |
+      #     cargo login ${{ secrets.CRATES_IO_TOKEN }}
       - uses: ./.github/actions/publish-crate
         with:
           crate: ${{ matrix.crate }}
