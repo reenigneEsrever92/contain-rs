@@ -38,13 +38,13 @@ jobs:
       - name: Crates.io Login
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
-      - uses: ./.github/actions/publish-crate.yml
+      - uses: ./.github/actions/publish-crate
         with:
           crate: ${{ matrix.crate }}
-      - uses: ./.github/actions/create-git-tag.yml
+      - uses: ./.github/actions/create-git-tag
         with:
           crate-path: ${{ matrix.path }}
-      - uses: ./.github/actions/increment-version.yml
+      - uses: ./.github/actions/increment-version
         with:
           crate-path: ${{ matrix.path }}
           level: ${{ matrix.level }}
