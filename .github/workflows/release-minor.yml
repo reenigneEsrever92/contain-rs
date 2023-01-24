@@ -35,6 +35,9 @@ jobs:
         run: |
           cargo install cargo-bump
           cargo install cargo-get
+          ls -la .
+          ls -la ./.github
+          ls -la ./.github/actions
       - name: Crates.io Login
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
