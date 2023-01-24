@@ -15,11 +15,14 @@ pub struct SurrealDB {
 }
 
 impl SurrealDB {
+
+    #[allow(unused)]
     fn user(&mut self, user: &str) -> Self {
         self.user = Some(user.to_string());
         self.clone()
     }
 
+    #[allow(unused)]
     fn password(&mut self, password: &str) -> Self {
         self.password = Some(password.to_string());
         self.clone()
