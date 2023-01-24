@@ -1,14 +1,14 @@
 name: Publish Crate
+description: Publishes a crate to crates.io
 
 inputs:
   crate:
-    type: string
+    description: The name of the crate
     required: true
 
-env:
-  CARGO_TERM_COLOR: always
-
 runs:
-  - name: Publish Crate
-    run: |
-      cargo publish -p ${{ inputs.crate }}
+  using: composite
+  steps:
+    - run: |
+        cargo publish -p ${{ inputs.crate }}
+      shell: bash

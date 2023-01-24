@@ -1,17 +1,17 @@
 name: Create Git Tag
+description: Create a git release tag and push it
 
 inputs:
   crate-path:
-    type: string
+    description: path of the crate to create the tag for
     required: true
 
-env:
-  CARGO_TERM_COLOR: always
-
 runs:
-  - name: Create Git Tag
-    run: |
-      cd ${{ inputs.crate-path }}
-      export VERSION=$(cargo get version)
-      git tag -a ${{ inputs.crate-path }}-${VERSION} -m "Release ${{ inputs.crate-path }} ${VERSION}"
-      git push origin ${{ inputs.crate-path }}-${VERSION}
+  using: composite
+  steps:
+    - run: |
+        cd ${{ inputs.crate-path }}
+        export VERSION=$(cargo get version)
+        git tag -a ${{ inputs.crate-path }}-${VERSION} -m "Release ${{ inputs.crate-path }} ${VERSION}"
+        git push origin ${{ inputs.crate-path }}-${VERSION}
+      shell: bash
