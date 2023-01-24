@@ -35,6 +35,7 @@ jobs:
         run: |
           cargo install cargo-bump
           cargo install cargo-get
+          pwd
           ls -la .
           ls -la ./.github
           ls -la ./.github/actions
