@@ -29,7 +29,7 @@ jobs:
             path: "images/contain-rs-surrealdb"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v1
       - uses: fregante/setup-git-user@v1
       - name: Prepare
         run: |
@@ -38,13 +38,13 @@ jobs:
       - name: Crates.io Login
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
-      - uses: ./.github/actions/publish-crate
+      - uses: ./.github/actions/publish-crate.yml
         with:
           crate: ${{ matrix.crate }}
-      - uses: ./.github/actions/create-git-tag
+      - uses: ./.github/actions/create-git-tag.yml
         with:
           crate-path: ${{ matrix.path }}
-      - uses: ./.github/actions/increment-version
+      - uses: ./.github/actions/increment-version.yml
         with:
           crate-path: ${{ matrix.path }}
           level: ${{ matrix.level }}
