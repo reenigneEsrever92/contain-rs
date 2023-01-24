@@ -29,26 +29,22 @@ jobs:
             path: "images/contain-rs-surrealdb"
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - uses: fregante/setup-git-user@v1
       - name: Prepare
         run: |
           cargo install cargo-bump
           cargo install cargo-get
-          pwd
-          ls -la .
-          ls -la ./.github
-          ls -la ./.github/actions
       - name: Crates.io Login
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
-      - uses: ./.github/actions/publish-crate.yml
+      - uses: ./.github/actions/publish-crate
         with:
           crate: ${{ matrix.crate }}
-      - uses: ./.github/actions/create-git-tag.yml
+      - uses: ./.github/actions/create-git-tag
         with:
           crate-path: ${{ matrix.path }}
-      - uses: ./.github/actions/increment-version.yml
+      - uses: ./.github/actions/increment-version
         with:
           crate-path: ${{ matrix.path }}
           level: ${{ matrix.level }}
