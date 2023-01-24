@@ -41,7 +41,7 @@ jobs:
           ]
 
     steps:
-      - uses: publish-crate.yml
+      - uses: ./.github/workflows/publish-crate.yml
         with:
           crate: ${{ matrix.crate }}
 
@@ -62,10 +62,10 @@ jobs:
           ]
         level: ["minor"]
     steps:
-      - uses: create-git-tag.yml
+      - uses: ./.github/workflows/create-git-tag.yml
         with:
           crate-path: ${{ matrix.crate-path }}
-      - uses: increment-version.yml
+      - uses: ./.github/workflows/increment-version.yml
         with:
           crate-path: ${{ matrix.crate-path }}
           level: ${{ matrix.level }}
