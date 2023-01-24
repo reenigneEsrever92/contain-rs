@@ -12,6 +12,21 @@ env:
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - crate: "contain-rs-core"
+            path: "contain-rs-core"
+          - crate: "contain-rs-parser"
+            path: "contain-rs-parser"
+          - crate: "contain-rs-macro"
+            path: "contain-rs-macro"
+          - crate: "contain-rs-nginx"
+            path: "images/contain-rs-nginx"
+          - crate: "contain-rs-postgres"
+            path: "images/contain-rs-postgres"
+          - crate: "contain-rs-surrealdb"
+            path: "images/contain-rs-surrealdb"
 
     steps:
       - uses: actions/checkout@v3
@@ -23,49 +38,13 @@ jobs:
       - name: Crates.io Login
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
-
-  publish:
-    runs-on: ubuntu-latest
-    needs: prepare
-    strategy:
-      matrix:
-        crate:
-          [
-            "contain-rs-core",
-            "contain-rs-parser",
-            "contain-rs-macro",
-            "contain-rs-nginx",
-            "contain-rs-postgres",
-            "contain-rs-surrealdb",
-            "contain-rs",
-          ]
-
-    steps:
       - uses: ./.github/actions/publish-crate.yml
         with:
           crate: ${{ matrix.crate }}
-
-  git-house-keeping:
-    runs-on: ubuntu-latest
-    needs: publish
-    strategy:
-      matrix:
-        crate-path:
-          [
-            "contain-rs-core",
-            "contain-rs-parser",
-            "contain-rs-macro",
-            "images/contain-rs-nginx",
-            "images/contain-rs-postgres",
-            "images/contain-rs-surrealdb",
-            "contain-rs",
-          ]
-        level: ["minor"]
-    steps:
       - uses: ./.github/actions/create-git-tag.yml
         with:
-          crate-path: ${{ matrix.crate-path }}
+          crate-path: ${{ matrix.path }}
       - uses: ./.github/actions/increment-version.yml
         with:
-          crate-path: ${{ matrix.crate-path }}
+          crate-path: ${{ matrix.path }}
           level: ${{ matrix.level }}
