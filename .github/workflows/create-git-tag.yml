@@ -1,0 +1,23 @@
+name: Create Git Tag
+
+on:
+  workflow_call:
+    inputs:
+      crate-path:
+        type: string
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Git Tag
+        run: |
+          cd ${{ inputs.crate-path }}
+          export VERSION=$(cargo get version)
+          git tag -a ${{ inputs.crate-path }}-${VERSION} -m "Release ${{ inputs.crate-path }} ${VERSION}"
+          git push origin ${{ inputs.crate-path }}-${VERSION}

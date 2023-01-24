@@ -1,0 +1,20 @@
+name: Publish Crate
+
+on:
+  workflow_call:
+    inputs:
+      crate:
+        type: string
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Publish Crate
+        run: |
+          cargo publish -p ${{ inputs.crate }}

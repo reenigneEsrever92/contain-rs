@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  release:
+  prepare:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,21 +20,52 @@ jobs:
         run: |
           cargo install cargo-bump
           cargo install cargo-get
-          cargo install cargo-publish-all
       - name: Crates.io Login
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
-      - name: Publish All
-        run: cargo-publish-all
-      - name: Create Tag
-        run: |
-          export VERSION=$(cargo get version)
-          git tag -a ${VERSION} -m "Release ${VERSION}"
-          git push origin ${VERSION}
-      - name: Increment Version
-        run: |
-          cargo bump minor
-          export VERSION=$(cargo get version)
-          git add .
-          git commit -m "incremented patch level to ${VERSION}"
-          git push
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      matrix:
+        crate:
+          [
+            "contain-rs-core",
+            "contain-rs-parser",
+            "contain-rs-macro",
+            "contain-rs-nginx",
+            "contain-rs-postgres",
+            "contain-rs-surrealdb",
+            "contain-rs",
+          ]
+
+    steps:
+      - uses: publish-crate.yml
+        with:
+          crate: ${{ matrix.crate }}
+
+  git-house-keeping:
+    runs-on: ubuntu-latest
+    needs: publish
+    strategy:
+      matrix:
+        crate-path:
+          [
+            "contain-rs-core",
+            "contain-rs-parser",
+            "contain-rs-macro",
+            "images/contain-rs-nginx",
+            "images/contain-rs-postgres",
+            "images/contain-rs-surrealdb",
+            "contain-rs",
+          ]
+        level: ["minor"]
+    steps:
+      - uses: create-git-tag.yml
+        with:
+          crate-path: ${{ matrix.crate-path }}
+      - uses: increment-version.yml
+        with:
+          crate-path: ${{ matrix.crate-path }}
+          level: ${{ matrix.level }}
