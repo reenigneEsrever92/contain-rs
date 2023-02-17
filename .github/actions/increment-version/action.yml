@@ -2,9 +2,6 @@ name: Increment Version
 description: Increment the version of the crate at the specified path
 
 inputs:
-  crate-path:
-    description: Path of the crate
-    required: true
   level:
     description: Version level to increment (major, minor, patch)
     required: true
@@ -13,10 +10,5 @@ runs:
   using: composite
   steps:
     - run: |
-        cd ${{ inputs.crate-path }}
-        cargo bump ${{ inputs.level }}
-        export VERSION=$(cargo get version)
-        git add .
-        git commit -m "incremented ${{ inputs.crate-path }} patch level to ${VERSION}"
-        git push
+        cargo workspaces bump ${{ inputs.level }}
       shell: bash

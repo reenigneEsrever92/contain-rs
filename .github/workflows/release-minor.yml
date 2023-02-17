@@ -12,21 +12,21 @@ env:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - crate: "contain-rs-core"
-            path: "contain-rs-core"
-          - crate: "contain-rs-parser"
-            path: "contain-rs-parser"
-          - crate: "contain-rs-macro"
-            path: "contain-rs-macro"
-          - crate: "contain-rs-nginx"
-            path: "images/contain-rs-nginx"
-          - crate: "contain-rs-postgres"
-            path: "images/contain-rs-postgres"
-          - crate: "contain-rs-surrealdb"
-            path: "images/contain-rs-surrealdb"
+    # strategy:
+    #   matrix:
+    #     include:
+    #       - crate: "contain-rs-core"
+    #         path: "contain-rs-core"
+    #       - crate: "contain-rs-parser"
+    #         path: "contain-rs-parser"
+    #       - crate: "contain-rs-macro"
+    #         path: "contain-rs-macro"
+    #       - crate: "contain-rs-nginx"
+    #         path: "images/contain-rs-nginx"
+    #       - crate: "contain-rs-postgres"
+    #         path: "images/contain-rs-postgres"
+    #       - crate: "contain-rs-surrealdb"
+    #         path: "images/contain-rs-surrealdb"
 
     steps:
       - uses: actions/checkout@v3

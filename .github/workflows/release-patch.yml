@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  release:
+  release-all:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,23 +18,19 @@ jobs:
       - uses: fregante/setup-git-user@v1
       - name: Prepare
         run: |
-          cargo install cargo-bump
+          cargo install cargo-workspaces
           cargo install cargo-get
-          cargo install cargo-publish-all
       - name: Crates.io Login
         run: |
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
       - name: Publish All
-        run: cargo-publish-all
-      - name: Create Tag
         run: |
-          export VERSION=$(cargo get version)
-          git tag -a ${VERSION} -m "Release ${VERSION}"
-          git push origin ${VERSION}
+          cargo workspaces publish -y
+      # - name: Create Tag
+      #   run: |
+      #     export VERSION=$(cargo get version)
+      #     git tag -a ${VERSION} -m "Release ${VERSION}"
+      #     git push origin ${VERSION}
       - name: Increment Version
         run: |
-          cargo bump patch
-          export VERSION=$(cargo get version)
-          git add .
-          git commit -m "incremented patch level to ${VERSION}"
-          git push
+          cargo workspaces version -y patch
