@@ -25,12 +25,12 @@ jobs:
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
       - name: Publish All
         run: |
-          cargo workspaces publish -y
+          cargo workspaces publish -y patch
       # - name: Create Tag
       #   run: |
       #     export VERSION=$(cargo get version)
       #     git tag -a ${VERSION} -m "Release ${VERSION}"
       #     git push origin ${VERSION}
-      - name: Increment Version
-        run: |
-          cargo workspaces version -y patch
+      # - name: Increment Version
+      #   run: |
+      #     cargo workspaces version -y patch
