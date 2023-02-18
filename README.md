@@ -18,16 +18,13 @@ contain-rs = "0.2"
 Create a client and start a container:
 
 ```rust
-use contain_rs::{
-    client::{docker::Docker, Client, Handle},
-    container::{Container, Image},
-};
+use contain_rs::*;
 
 let docker = Docker::new();
 
 let container = Container::from_image(Image::from_name("docker.io/library/nginx"));
 
-let handle = podman.create(container);
+let handle = docker.create(container);
 
 handle.run();
 handle.wait();
