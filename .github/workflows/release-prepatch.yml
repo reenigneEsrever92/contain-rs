@@ -1,8 +1,10 @@
 name: Release Pre Patch
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    secrets:
+      CRATES_IO_TOKEN:
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
