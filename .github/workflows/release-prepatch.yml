@@ -25,4 +25,4 @@ jobs:
           cargo login ${{ secrets.CRATES_IO_TOKEN }}
       - name: Publish All
         run: |
-          cargo workspaces publish -y patch
+          cargo workspaces publish -y prepatch
