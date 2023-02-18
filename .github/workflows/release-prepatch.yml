@@ -43,4 +43,4 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: workspaces
-          args: publish -y prepatch
+          args: publish -y prerelease

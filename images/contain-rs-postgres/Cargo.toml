@@ -3,10 +3,9 @@ name = "contain-rs-postgres"
 version = "0.2.0-alpha.0"
 edition = { workspace = true }
 license = { workspace = true }
-description = "contain-rs postgres images"
+description = "Run containers with docker or podman"
 repository = "https://github.com/reenigneEsrever92/contain-rs"
 documentation = "https://docs.rs/contain-rs"
-readme = "README.md"
 categories = ["development-tools::testing"]
 
 [dependencies]
