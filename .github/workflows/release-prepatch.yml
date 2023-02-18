@@ -26,7 +26,8 @@ jobs:
           args: cargo-workspaces
       - uses: actions-rs/cargo@v1
         with:
-          command: login ${{secrets.CRATES_IO_TOKEN}}
+          command: login
+          args: ${{secrets.CRATES_IO_TOKEN}}
       - uses: actions-rs/cargo@v1
         with:
           command: workspaces
