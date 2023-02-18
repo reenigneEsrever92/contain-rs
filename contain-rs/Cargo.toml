@@ -13,5 +13,5 @@ categories = ["development-tools::testing"]
 macros = []
 
 [dependencies]
-contain-rs-core = { path = "../contain-rs-core" }
-contain-rs-macro = { path = "../contain-rs-macro" }
+contain-rs-core = { path = "../contain-rs-core", version = "0.2.0-alpha.0" }
+contain-rs-macro = { path = "../contain-rs-macro", version = "0.2.0-alpha.0" }

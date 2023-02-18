@@ -10,4 +10,4 @@ readme = "README.md"
 categories = ["development-tools::testing"]
 
 [dependencies]
-contain-rs = { path = "../../contain-rs", features = ["macros"] }
+contain-rs = { path = "../../contain-rs", features = ["macros"], version = "0.2.0-alpha.0" }
