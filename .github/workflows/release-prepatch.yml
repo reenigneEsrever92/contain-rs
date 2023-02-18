@@ -16,13 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: fregante/setup-git-user@v1
-      - name: Prepare
-        run: |
-          cargo install cargo-workspaces
-          cargo install cargo-get
-      - name: Crates.io Login
-        run: |
-          cargo login ${{ secrets.CRATES_IO_TOKEN }}
-      - name: Publish All
-        run: |
-          cargo workspaces publish -y prepatch
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install cargo-workspaces
+      - uses: actions-rs/cargo@v1
+        with:
+          command: login ${{secrets.CRATES_IO_TOKEN}}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: workspaces publish -y prepatch
