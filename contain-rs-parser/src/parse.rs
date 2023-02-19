@@ -52,7 +52,6 @@ enum Property {
     HealthCheckCommand(Path, Eq, LitStr),
     HealthCheckTimeout(Path, Eq, LitInt),
     Image(Path, Eq, LitStr),
-    Ports(Path, Eq, token::Bracket, Punctuated<LitPort, Token![,]>),
     WaitTime(Path, Eq, LitInt),
     WaitLog(Path, Eq, LitStr),
 }
@@ -78,14 +77,6 @@ impl Parse for Property {
                 input.parse()?,
                 input.parse()?,
                 input.parse()?,
-            ))
-        } else if peek_keyword(cursor, "ports") {
-            let content;
-            Ok(Property::Ports(
-                input.parse()?,
-                input.parse()?,
-                bracketed!(content in input),
-                Punctuated::parse_terminated(&content)?,
             ))
         } else if peek_keyword(cursor, "command") {
             let content;
@@ -113,22 +104,6 @@ impl Parse for Property {
     }
 }
 
-struct LitPort {
-    source: LitInt,
-    _colon: Token![:],
-    target: LitInt,
-}
-
-impl Parse for LitPort {
-    fn parse(input: syn::parse::ParseStream) -> SynResult<Self> {
-        Ok(LitPort {
-            source: input.parse()?,
-            _colon: input.parse()?,
-            target: input.parse()?,
-        })
-    }
-}
-
 #[derive(Debug)]
 struct FieldProperty {
     ident: Ident,
@@ -149,18 +124,6 @@ impl Parse for FieldProperty {
 pub fn parse_container(tokens: TokenStream) -> SynResult<Model> {
     let item_ast: DeriveInput = syn::parse2(tokens).unwrap();
     parse_derive_input(item_ast)
-}
-
-fn parse_field_attribute_value(value: Attribute) -> SynResult<String> {
-    let field_property: FieldProperty = syn::parse2(value.tokens)?;
-
-    match field_property.value {
-        Lit::Str(str) => Ok(str.value()),
-        _ => Err(syn::Error::new_spanned(
-            field_property.value,
-            "Expected string literal",
-        )),
-    }
 }
 
 fn parse_derive_input(ast: DeriveInput) -> SynResult<Model> {

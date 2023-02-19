@@ -1,7 +1,10 @@
 use contain_rs::*;
 
 #[derive(ContainerImpl, Default)]
-#[container(image = "docker.io/library/nginx", health_check_command = "curl http://localhost || exit 1", ports = [8080:80])]
+#[container(
+    image = "docker.io/library/nginx",
+    health_check_command = "curl http://localhost || exit 1"
+)]
 struct Nginx;
 
 #[cfg(test)]
