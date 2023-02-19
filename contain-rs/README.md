@@ -44,3 +44,34 @@ let latest = Image::from_str("docker.io/library/nginx:latest");
 assert!(latest.is_ok());
 ```
 
+## Macro
+
+Contain-rs provides a derive macro to implement the IntoContainer trait for a struct. 
+The macros feature has to be enabled to make use of the derive macro.
+
+You can then create a container like this:
+
+```rust
+use contain_rs::*;
+
+#[derive(ContainerImpl, Default)]
+#[container(
+    image = "docker.io/library/nginx",
+    health_check_command = "curl http://localhost || exit 1"
+)]
+struct Nginx {
+    #[contain_rs(port = 80)]
+    port: u32,
+}
+
+let client = Docker::default();
+
+let nginx = client.create(Nginx{ port: 8080 });
+
+nginx.run();
+nginx.wait();
+nginx.rm(); // stops and removes the container
+// this would be done automatically when the container handle goes out of scope
+```
+
+
