@@ -30,3 +30,14 @@ quote = "1.0"
 proc-macro2 = "1.0"
 trybuild = "1.0"
 os_pipe = "1.1"
+
+contain-rs = { version = "0.2.0-alpha.6", path = "contain-rs" }
+contain-rs-core = { version = "0.2.0-alpha.6", path = "contain-rs-core" }
+contain-rs-parser = { version = "0.2.0-alpha.6", path = "contain-rs-parser" }
+contain-rs-macro = { version = "0.2.0-alpha.6", path = "contain-rs-macro" }
+contain-rs-nginx = { version = "0.2.0-alpha.6", path = "images/contain-rs-nginx" }
+contain-rs-postgres = { version = "0.2.0-alpha.6", path= "images/contain-rs-postgres" }
+contain-rs-surrealdb = { version = "0.2.0-alpha.6", path = "images/contain-rs-surrealdb" }
+
+[workpsace.metadata.workspaces]
+no_individual_tags = true

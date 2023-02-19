@@ -12,11 +12,12 @@ categories = ["development-tools::testing"]
 proc-macro = true
 
 [dependencies]
-contain-rs-parser = { path = "../contain-rs-parser", version = "0.2.0-alpha.0" }
-contain-rs-core = { path = "../contain-rs-core", version = "0.2.0-alpha.0" }
 syn = { workspace = true, features = ["full", "extra-traits"] }
 quote = { workspace = true }
 proc-macro2 = { workspace = true }
+
+contain-rs-parser = { workspace = true }
+contain-rs-core = { workspace = true }
 
 [dev-dependencies]
 trybuild = { workspace = true }

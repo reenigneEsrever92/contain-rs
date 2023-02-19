@@ -9,8 +9,8 @@ documentation = "https://docs.rs/contain-rs"
 categories = ["development-tools::testing"]
 
 [features]
-macros = []
+macros = ["dep:contain-rs-macro"]
 
 [dependencies]
-contain-rs-core = { path = "../contain-rs-core", version = "0.2.0-alpha.0" }
-contain-rs-macro = { path = "../contain-rs-macro", version = "0.2.0-alpha.0" }
+contain-rs-core = { workspace = true }
+contain-rs-macro = { workspace = true, optional = true }

@@ -9,8 +9,9 @@ documentation = "https://docs.rs/contain-rs"
 categories = ["development-tools::testing"]
 
 [dependencies]
-contain-rs-core = { path = "../contain-rs-core", version = "0.2.0-alpha.0" }
 syn = { workspace = true, features = ["full", "extra-traits"] }
 quote = { workspace = true }
 proc-macro2 = { workspace = true, features = ["span-locations"] }
 regex = { workspace = true }
+
+contain-rs-core = { workspace = true }

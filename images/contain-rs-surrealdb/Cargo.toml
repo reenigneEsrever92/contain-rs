@@ -9,7 +9,7 @@ documentation = "https://docs.rs/contain-rs"
 categories = ["development-tools::testing"]
 
 [dependencies]
-contain-rs = { path = "../../contain-rs", features = ["macros"], version = "0.2.0-alpha.0" }
+contain-rs = { workspace = true }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["blocking"] }
