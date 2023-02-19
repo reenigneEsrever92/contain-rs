@@ -1,6 +1,6 @@
 use contain_rs::*;
 
-#[derive(Clone, Default, ContainerImpl)]
+#[derive(Clone, ContainerImpl)]
 #[container(
     image = "docker.io/surrealdb/surrealdb:latest", 
     command = ["start"], 
@@ -15,6 +15,16 @@ pub struct SurrealDB {
     port: u32,
 }
 
+impl Default for SurrealDB {
+    fn default() -> Self {
+        Self {
+            user: Default::default(),
+            password: Default::default(),
+            port: 8080,
+        }
+    }
+}
+
 impl SurrealDB {
     #[allow(unused)]
     pub fn user(&mut self, user: &str) -> Self {
@@ -27,21 +37,21 @@ impl SurrealDB {
         self.password = Some(password.to_string());
         self.clone()
     }
+
+    pub fn port(&mut self, port: u32) -> Self {
+        self.port = port;
+        self.clone()
+    }
 }
 
 #[cfg(test)]
 mod test {
     use contain_rs::{Client, Docker, Handle};
-    use tracing_subscriber::filter::LevelFilter;
 
     use crate::SurrealDB;
 
     #[test]
     fn test_surrealdb() {
-        tracing_subscriber::fmt()
-            .with_max_level(LevelFilter::TRACE)
-            .init();
-
         let client = Docker::new();
         let container = client.create(SurrealDB::default());
 
