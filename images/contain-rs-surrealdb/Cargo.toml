@@ -1,6 +1,6 @@
 [package]
 name = "contain-rs-surrealdb"
-version = "0.2.0-alpha.5"
+version = "0.2.0-alpha.6"
 edition = { workspace = true }
 license = { workspace = true }
 description = "Run containers with docker or podman"
