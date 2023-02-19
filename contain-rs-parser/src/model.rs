@@ -4,6 +4,7 @@ use std::time::Duration;
 pub enum FieldAttribute {
     EnvVar(String),
     Arg(String),
+    Port(u32),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -14,14 +15,7 @@ pub struct Model {
     pub health_check: Option<HealthCheck>,
     pub wait_time: Option<WaitTime>,
     pub wait_log: Option<WaitLog>,
-    pub ports: Vec<Port>,
     pub fields: Vec<ModelField>,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct Arg {
-    pub name: String,
-    pub r#type: FieldType,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -55,10 +49,4 @@ pub struct ModelField {
 pub enum FieldType {
     Simple,
     Option,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct Port {
-    pub source: u32,
-    pub target: u32,
 }

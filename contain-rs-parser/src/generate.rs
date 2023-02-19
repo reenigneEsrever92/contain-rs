@@ -1,15 +1,12 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 
-use crate::model::{
-    Command, FieldAttribute, HealthCheck, Model, ModelField, Port, WaitLog, WaitTime,
-};
+use crate::model::{Command, FieldAttribute, HealthCheck, Model, ModelField, WaitLog, WaitTime};
 
 pub fn generate_container(model: Model) -> TokenStream {
     let struct_name = format_ident!("{}", model.struct_name);
     let image_name = model.image;
     let fields = model.fields;
-    let ports = model.ports;
     let health_check = model.health_check.iter();
     let command = model.command;
     let wait_time = model.wait_time;
@@ -26,7 +23,6 @@ pub fn generate_container(model: Model) -> TokenStream {
                 let mut container = Container::from_image(image);
                 #command
                 #( #fields )*
-                #( #ports )*
                 #( #health_check )*
                 #wait_time
                 #wait_log
@@ -81,22 +77,30 @@ impl ToTokens for ModelField {
     }
 }
 
-impl ToTokens for Port {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let source = self.source;
-        let target = self.target;
-        tokens.extend(quote! { container.map_port(#source, #target); })
-    }
-}
-
 fn generate_field_tokens(field: &ModelField, attributes: &[FieldAttribute]) -> Vec<TokenStream> {
     attributes
         .iter()
         .map(|attr| match attr {
             FieldAttribute::EnvVar(name) => generate_env_var(field, name),
             FieldAttribute::Arg(name) => generate_arg(field, name),
+            FieldAttribute::Port(port) => generate_port(field, *port),
         })
         .collect()
+}
+
+fn generate_port(field: &ModelField, port: u32) -> TokenStream {
+    let field_name = format_ident!("{}", &field.name);
+
+    match field.r#type {
+        crate::model::FieldType::Simple => quote! {
+            container.map_port(&self.#field_name, #port);
+        },
+        crate::model::FieldType::Option => quote! {
+            if let Some(value) = self.#field_name {
+                container.map_port(&value, #port);
+            }
+        },
+    }
 }
 
 fn generate_arg(field: &ModelField, name: &str) -> TokenStream {
@@ -176,17 +180,18 @@ mod test {
                 command = ["nginx", "-g", "daemon off;"],
                 health_check_command = "curl http://localhost || exit 1",
                 health_check_timeout = 30000,
-                ports = [8080:8080, 8081:8080],
                 wait_time = 1000,
                 wait_log = "test"
             )]
             struct SimpleImage {
-                #[env_var = "PASSWORD"]
+                #[contain_rs(env_var = "PASSWORD")]
                 password: String,
-                #[env_var = "USER"]
+                #[contain_rs(env_var = "USER")]
                 user: Option<String>,
-                #[arg = "--arg"]
+                #[contain_rs(arg = "--arg")]
                 arg: String,
+                #[contain_rs(port = 8080)]
+                web_port: u32,
             }
         };
 
@@ -209,8 +214,7 @@ mod test {
                     }
                     container.arg("--arg");
                     container.arg(&self.arg);
-                    container.map_port(8080u32, 8080u32);
-                    container.map_port(8081u32, 8080u32);
+                    container.map_port(&self.web_port, 8080u32);
                     container.health_check(HealthCheck::new("curl http://localhost || exit 1"))
                         .wait_for(WaitStrategy::HealthCheck);
                     container.wait_for(WaitStrategy::WaitTime { duration: Duration::from_millis(1000u64) });

@@ -6,11 +6,11 @@ use contain_rs::*;
     health_check_command = "pg_isready"
 )]
 pub struct Postgres {
-    #[env_var = "POSTGRES_DB"]
+    #[contain_rs(env_var = "POSTGRES_DB")]
     db: Option<String>,
-    #[env_var = "POSTGRES_USER"]
+    #[contain_rs(env_var = "POSTGRES_USER")]
     user: Option<String>,
-    #[env_var = "POSTGRES_PASSWORD"]
+    #[contain_rs(env_var = "POSTGRES_PASSWORD")]
     password: String,
 }
 

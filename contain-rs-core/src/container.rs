@@ -108,18 +108,13 @@ pub struct Port {
     pub number: String,
 }
 
-impl From<&str> for Port {
-    fn from(s: &str) -> Self {
+impl<T> From<T> for Port
+where
+    T: ToString,
+{
+    fn from(value: T) -> Self {
         Self {
-            number: s.to_string(),
-        }
-    }
-}
-
-impl From<u32> for Port {
-    fn from(s: u32) -> Self {
-        Self {
-            number: s.to_string(),
+            number: value.to_string(),
         }
     }
 }

@@ -4,18 +4,18 @@ use contain_rs::*;
 #[container(
     image = "docker.io/surrealdb/surrealdb:latest", 
     command = ["start"], 
-    ports = [8080:8000], 
     wait_log = ".*Started web server on.*"
 )]
 pub struct SurrealDB {
-    #[arg = "--user"]
+    #[contain_rs(arg = "--user")]
     user: Option<String>,
-    #[arg = "--pass"]
+    #[contain_rs(arg = "--pass")]
     password: Option<String>,
+    #[contain_rs(port = 8000)]
+    port: u32,
 }
 
 impl SurrealDB {
-
     #[allow(unused)]
     pub fn user(&mut self, user: &str) -> Self {
         self.user = Some(user.to_string());
@@ -38,7 +38,9 @@ mod test {
 
     #[test]
     fn test_surrealdb() {
-        tracing_subscriber::fmt().with_max_level(LevelFilter::TRACE).init();
+        tracing_subscriber::fmt()
+            .with_max_level(LevelFilter::TRACE)
+            .init();
 
         let client = Docker::new();
         let container = client.create(SurrealDB::default());
