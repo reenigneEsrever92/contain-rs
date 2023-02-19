@@ -9,7 +9,7 @@ use regex::Regex;
 use tracing::*;
 
 use crate::{
-    container::{Container, WaitStrategy},
+    container::{Container, Volume, WaitStrategy},
     error::{ContainerResult, ContainersError},
     rt::{ContainerStatus, DetailedContainerInfo},
 };
@@ -55,6 +55,7 @@ pub fn build_run_command<'a>(command: &'a mut Command, container: &Container) ->
     add_run_args(command);
     add_name_arg(command, container);
     add_env_var_args(command, container);
+    add_volume_args(command, container);
     add_export_ports_args(command, container);
     add_health_check_args(command, container);
     add_image_arg(command, container);
@@ -63,11 +64,26 @@ pub fn build_run_command<'a>(command: &'a mut Command, container: &Container) ->
     command
 }
 
+fn add_volume_args<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
+    let folded = container
+        .volumes
+        .iter()
+        .fold(command, |c: &mut Command, volume| match volume {
+            Volume::Mount {
+                host_path,
+                mount_point,
+            } => c.arg("-v").arg(format!("{host_path}:{mount_point}")),
+            Volume::Named { name, mount_point } => c.arg("-v").arg(format!("{name}:{mount_point}")),
+        });
+
+    folded
+}
+
 fn add_command_arg<'a>(command: &'a mut Command, container: &Container) -> &'a Command {
     let folded = container
         .command
         .iter()
-        .fold(command, |c: &mut std::process::Command, arg| c.arg(arg));
+        .fold(command, |c: &mut Command, arg| c.arg(arg));
 
     folded
 }

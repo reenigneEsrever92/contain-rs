@@ -199,6 +199,18 @@ impl From<&Image> for String {
     }
 }
 
+#[derive(Clone)]
+pub enum Volume {
+    Mount {
+        host_path: String,
+        mount_point: String,
+    },
+    Named {
+        name: String,
+        mount_point: String,
+    },
+}
+
 ///
 /// A container makes up the schedulable unit of this crate.
 ///
@@ -210,6 +222,7 @@ pub struct Container {
     pub image: Image,
     pub command: Vec<String>,
     pub network: Option<Network>,
+    pub volumes: Vec<Volume>,
     pub port_mappings: Vec<PortMapping>,
     pub env_vars: Vec<EnvVar>,
     pub health_check: Option<HealthCheck>,
@@ -237,6 +250,7 @@ impl Container {
             network: None,
             port_mappings: Vec::new(),
             env_vars: Vec::new(),
+            volumes: Vec::new(),
             health_check: None,
             wait_strategy: None,
             additional_wait_period: Duration::from_secs(0),
@@ -279,6 +293,24 @@ impl Container {
                 target: mapping.1.into(),
             })
             .collect();
+
+        self
+    }
+
+    pub fn volume(&mut self, name: &str, mount_point: &str) -> &mut Self {
+        self.volumes.push(Volume::Named {
+            name: name.to_string(),
+            mount_point: mount_point.to_string(),
+        });
+
+        self
+    }
+
+    pub fn mount(&mut self, host_path: &str, mount_point: &str) -> &mut Self {
+        self.volumes.push(Volume::Mount {
+            host_path: host_path.to_string(),
+            mount_point: mount_point.to_string(),
+        });
 
         self
     }
