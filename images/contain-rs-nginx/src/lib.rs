@@ -5,7 +5,10 @@ use contain_rs::*;
     image = "docker.io/library/nginx",
     health_check_command = "curl http://localhost || exit 1"
 )]
-struct Nginx;
+struct Nginx {
+    #[contain_rs(port = 80)]
+    port: u32,
+}
 
 #[cfg(test)]
 mod test {
@@ -17,7 +20,7 @@ mod test {
     fn test_get() {
         let client = Podman::default();
 
-        let container = client.create(Nginx::default());
+        let container = client.create(Nginx { port: 8080 });
 
         container.run().unwrap();
         container.wait().unwrap();
