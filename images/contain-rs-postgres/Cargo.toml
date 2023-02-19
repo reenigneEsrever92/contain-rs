@@ -9,4 +9,4 @@ documentation = "https://docs.rs/contain-rs"
 categories = ["development-tools::testing"]
 
 [dependencies]
-contain-rs = { workspace = true }
+contain-rs = { workspace = true, features = ["macros"] }
