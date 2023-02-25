@@ -39,5 +39,5 @@ contain-rs-nginx = { version = "0.2.0-alpha.7", path = "images/contain-rs-nginx"
 contain-rs-postgres = { version = "0.2.0-alpha.7", path= "images/contain-rs-postgres" }
 contain-rs-surrealdb = { version = "0.2.0-alpha.7", path = "images/contain-rs-surrealdb" }
 
-[workpsace.metadata.workspaces]
+[workspace.metadata.workspaces]
 no_individual_tags = true
