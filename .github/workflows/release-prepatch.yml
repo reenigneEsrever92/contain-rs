@@ -29,9 +29,9 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+            target/ 
+          key: ${{ runner.os }}-cargo
+          restore-keys: ${{ runner.os }}-cargo
       - uses: actions-rs/cargo@v1
         with:
           command: install

@@ -12,21 +12,6 @@ env:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    # strategy:
-    #   matrix:
-    #     include:
-    #       - crate: "contain-rs-core"
-    #         path: "contain-rs-core"
-    #       - crate: "contain-rs-parser"
-    #         path: "contain-rs-parser"
-    #       - crate: "contain-rs-macro"
-    #         path: "contain-rs-macro"
-    #       - crate: "contain-rs-nginx"
-    #         path: "images/contain-rs-nginx"
-    #       - crate: "contain-rs-postgres"
-    #         path: "images/contain-rs-postgres"
-    #       - crate: "contain-rs-surrealdb"
-    #         path: "images/contain-rs-surrealdb"
 
     steps:
       - uses: actions/checkout@v3
@@ -35,23 +20,27 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - uses: katyo/publish-crates@v1
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
         with:
-          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
-      # - name: Prepare
-      #   run: |
-      #     cargo install cargo-bump
-      #     cargo install cargo-get
-      # - name: Crates.io Login
-      #   run: |
-      #     cargo login ${{ secrets.CRATES_IO_TOKEN }}
-      - uses: ./.github/actions/publish-crate
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/            
+          key: ${{ runner.os }}-cargo
+          restore-keys: ${{ runner.os }}-cargo
+      - uses: actions-rs/cargo@v1
         with:
-          crate: ${{ matrix.crate }}
-      - uses: ./.github/actions/create-git-tag
+          command: install
+          args: cargo-workspaces
+      - uses: actions-rs/cargo@v1
         with:
-          crate-path: ${{ matrix.path }}
-      - uses: ./.github/actions/increment-version
+          command: login
+          args: ${{secrets.CRATES_IO_TOKEN}}
+      - uses: actions-rs/cargo@v1
         with:
-          crate-path: ${{ matrix.path }}
-          level: ${{ matrix.level }}
+          command: workspaces
+          args: publish --no-individual-tags -y minor

@@ -16,21 +16,31 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: fregante/setup-git-user@v1
-      - name: Prepare
-        run: |
-          cargo install cargo-workspaces
-          cargo install cargo-get
-      - name: Crates.io Login
-        run: |
-          cargo login ${{ secrets.CRATES_IO_TOKEN }}
-      - name: Publish All
-        run: |
-          cargo workspaces publish -y patch
-      # - name: Create Tag
-      #   run: |
-      #     export VERSION=$(cargo get version)
-      #     git tag -a ${VERSION} -m "Release ${VERSION}"
-      #     git push origin ${VERSION}
-      # - name: Increment Version
-      #   run: |
-      #     cargo workspaces version -y patch
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/            
+          key: ${{ runner.os }}-cargo
+          restore-keys: ${{ runner.os }}-cargo
+      - uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-workspaces
+      - uses: actions-rs/cargo@v1
+        with:
+          command: login
+          args: ${{secrets.CRATES_IO_TOKEN}}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: workspaces
+          args: publish --no-individual-tags -y patch
