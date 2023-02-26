@@ -7,7 +7,9 @@ pub use contain_rs_core::{
     Regex,
 };
 
-pub use contain_rs_core::client::{docker::Docker, podman::Podman, Client, Handle};
+pub use contain_rs_core::client::{
+    docker::Docker, podman::Podman, Client, ContainerHandle, Handle,
+};
 
 #[cfg(feature = "macros")]
 pub use contain_rs_macro::ContainerImpl;
