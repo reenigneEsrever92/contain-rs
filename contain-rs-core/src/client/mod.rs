@@ -1,7 +1,7 @@
 //!
 //! This module contains the traits that represent the bare functiionality of a client.
 //!
-//! See [Podman] for usage of the podman client implementation.
+//! See [crate::client::podman::Podman] for usage of the podman client implementation.
 //!
 
 use std::{
@@ -24,7 +24,7 @@ pub mod shared;
 ///
 /// The client Trait represents a way to access a client.
 ///
-/// It's implemented by the [Podman] struct for example. And will be for docker as well.
+/// It's implemented by the [crate::client::podman::Podman] struct for example. And will be for docker as well.
 /// If you do that for any specific Type you get [`handles`](Handle) for free.
 ///
 ///

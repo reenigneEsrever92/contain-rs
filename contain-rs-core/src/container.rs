@@ -260,7 +260,7 @@ impl Container {
     ///
     /// Define a specific name for the container.
     ///
-    /// In case no explicit name is defined contain-rs will generate one as the name is being used by the [Client] for interaction.
+    /// In case no explicit name is defined contain-rs will generate one as the name is being used by the [crate::client::Client] for interaction.
     ///
     pub fn name(&mut self, name: &str) -> &mut Self {
         self.name = name.into();
