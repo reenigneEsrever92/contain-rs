@@ -2,15 +2,15 @@
 
 A tool to use docker and podman containers with rust.
 
-For usage take a look at the [Documentation](https://docs.rs/contain-rs/0.1.3/contain_rs/)
+For usage take a look at the [Documentation](https://docs.rs/contain-rs/latest/contain_rs/)
 
 ## Basic usage
 
-```
-use contain_rs::{Podman, Client, Handle, Container, Image};
+```rust
+use contain_rs::{Docker, Client, Handle, Container, Image};
 use std::str::FromStr;
 
-let podman = Podman::new();
+let podman = Docker::new();
 
 let container = Container::from_image(Image::from_str("docker.io/library/nginx").unwrap());
 
@@ -31,7 +31,7 @@ One of them works with docker the other one uses podman.
 
 Containers need image to run. You can create images like so:
 
-```
+```rust
 use contain_rs::Image;
 use std::str::FromStr;
 
