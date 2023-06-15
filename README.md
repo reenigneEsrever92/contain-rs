@@ -4,7 +4,7 @@
 
 A tool to use docker and podman containers with rust.
 
-For usage take a look at the [Documentation](https://docs.rs/contain-rs/0.1.3/contain_rs/)
+For usage take a look at the [Documentation](https://docs.rs/contain-rs/latest/contain_rs/)
 
 ## Quick Start
 
